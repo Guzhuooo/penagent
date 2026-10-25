@@ -3,13 +3,49 @@
 此目录是可选 M0.5 路线。平台 POST 能力仍须有效复测；存在 SDK 不等于启用 native。
 遵循 `docs/STANDARDS.md` §11。**全部 C/C++ configure、编译、链接、CTest 只允许在 GitHub Actions；不要在本机执行 CMake、编译器或 CTest。**
 
-## 当前明确阻塞
+## 当前状态（2026-10-25）
 
-- 尚未批准具体 owner/repo、可见性、分支与源码上传范围。当前目录也不是 Git 仓库。
-- 尚未批准固定工具链、SDK、sysroot、目标导出证据的来源/revision/SHA，亦无可下载的获批 bundle。
-- 尚未批准 artifact 上传范围；`ci-policy.json` 因此保留 `enabled: false` 和空授权字段。
-- workflow 只是待审查配置。没有创建仓库、推送、触发 Actions、上传 SDK 或进行任何 C/C++ 构建；**不声称 CI 通过或设备 ABI/TLS/取消兼容。**
-- action 使用完整 revision：checkout `11bd71901bbe5b1630ceea73d27597364c9af683`（v4.2.2），upload-artifact `ea165f8d65b6e75b540449e92b4886f43607fa02`（v4.6.2）。本次查询官方 GitHub API 因证书验证失败未能在线复核 tag 映射；后续审批须复核，不关闭 TLS 校验。
+- 用户已授权创建**私有**仓库 `https://github.com/Guzhuooo/penagent`（默认分支 `main`）；
+  public 可见性未授权，仓库实际为 private。
+- 新增实用型 `.github/workflows/native-compile.yml`，已在 GitHub Actions 真实跑绿：
+  JS 测试、纯 Python 策略合同测试、宿主 CMake 编译 + CTest、AArch64 compile-only
+  冒烟。运行记录与下载的 artifact 见 `docs/evidence/ci-native-0.3.0/`。
+  **本机从未执行** CMake、编译器或 CTest。
+- **仍阻塞**：设备 `.so` 的链接/交付需要获批的固定 toolchain + SDK + sysroot bundle
+  （来源、revision、SHA-256、许可、artifact 披露范围均未批准且不可下载），因此
+  `ci-policy.json` 保持 `enabled: false`、`native-manual.yml` 保持未启用；
+  AArch64 插件链接/设备加载仍需该 bundle。**本目录不声称任何 `.so` 设备兼容。**
+- action 固定完整 revision：checkout `11bd71901bbe5b1630ceea73d27597364c9af683`
+  （v4.2.2）、setup-node `39370e3970a6d050c480ffad4ff0ed4d3fdee5af`（v4.1.0）、
+  upload-artifact `ea165f8d65b6e75b540449e92b4886f43607fa02`（v4.6.2）。本次已用
+  GitHub API 在线核对这三个 tag 对应的 commit SHA；后续审批仍应复核，不关闭 TLS 校验。
+
+## 实用型 CI：宿主测试 + AArch64 编译冒烟
+
+`.github/workflows/native-compile.yml`（`workflow_dispatch`；另在 push 到 `main` 且改动
+`.github/workflows/native-compile.yml`、`native/**`、`tools/**` 时自动运行）：
+
+- `js-tests` job（ubuntu-24.04）：Node 20，`npm --prefix app test`（无依赖安装步骤）。
+- `native` job（ubuntu-24.04）按顺序执行，全部日志以文本 artifact 上传：
+  1. 记录 runner/工具身份（Ubuntu 版本、g++/cmake/ninja/python/curl、交叉 triple）；
+  2. `python3 -B -m unittest discover -s tools/tests -p 'test_native_ci.py' -v`
+     （22 项 fail-closed 策略合同，无 C/C++）；
+  3. `cmake -S native -B build-host -DHTTPX_BUILD_PLUGIN=OFF -DHTTPX_BUILD_TESTS=ON
+     -DCMAKE_BUILD_TYPE=Release` + build + `ctest --output-on-failure`；
+  4. AArch64 **compile-only** 冒烟：`aarch64-linux-gnu-g++ -std=gnu++17 -O2
+     -Wall -Wextra -c` 编译 `httpx_core.cpp` 与 `httpx_core_tests.cpp`，再用
+     `file` + `aarch64-linux-gnu-readelf -h` 断言 `ELF64` / `AArch64`，并检查 curl、
+     socket、pthread 未解析符号片段。**不链接、不执行、不产出 `.so`。**
+- 信任边界：该 workflow 使用 runner 自带宿主工具链，只证明源码在 Actions 中可编译、
+  宿主 core 测试可通过；**不是**设备 ABI/TLS/取消/加载证据，也不替代
+  `native-manual.yml` 的审核流程。
+- 宿主 curl：runner 为 8.5.0，满足 `native/CMakeLists.txt` 现有的
+  `find_package(CURL 7.79.1)` 宿主分支下限，**因此无需放宽下限**；插件分支
+  `curlver.h` `0x074f01`（7.79.1）pin 保持原样。宿主 8.5.0 会给出
+  `CURLOPT_PROTOCOLS`/`CURLOPT_REDIR_PROTOCOLS` 弃用告警，仅出现在宿主/冒烟编译，
+  设备分支 pin 的 7.79.1 无此弃用。
+- 重跑：`gh workflow run native-compile.yml --ref main`，然后
+  `gh run list --workflow native-compile.yml` / `gh run view <run-id>`。
 
 ## 审批和运行边界
 
@@ -115,4 +151,6 @@ bundle 是**已信任的可执行供应链**，SHA 只证明内容固定，不�
 python -B -m unittest discover -s tools/tests -p test_native_ci.py -v
 ```
 
-这些测试使用合成归档、mock 工具输出与假授权 fixture，不发网络、不 configure、不运行 native 测试，不替代真实 Actions 构建验证。
+这些测试使用合成归档、mock 工具输出与假授权 fixture，不发网络、不 configure、不运行 native 测试，不替代真实 Actions 构建验证。同一命令也在 `native-compile.yml` 的 `native` job 中执行，结果随 artifact 保存。
+
+真正的目标产物路径（`native-manual.yml`）仍保持未启用状态：其脚本会调用获批 bundle 中的 CMake/编译器/CTest，而当前**没有**获批 bundle。不要在本地用任何其它方式补做该构建。

@@ -46,7 +46,9 @@ jobs:
         with:
           node-version: "20"
       - name: Run JS tests (no dependency install required)
-        run: npm --prefix app test 2>&1 | tee js-tests.log
+        run: |
+          { echo "node: $(node --version)"; echo "npm: $(npm --version)"; } | tee js-tests.log
+          npm --prefix app test 2>&1 | tee -a js-tests.log
       - name: Upload JS test log
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -174,8 +176,7 @@ jobs:
             echo "- trigger: ${GITHUB_EVENT_NAME}"
             echo "- host build: HTTPX_BUILD_PLUGIN=OFF, HTTPX_BUILD_TESTS=ON, Release, runner g++"
             echo "- CTest: real loopback transport tests ran on the runner"
-            echo "- AArch64: compile-only smoke with \`aarch64-linux-gnu-g++\`; objects "
-            echo "  verified as ELF64/AArch64; nothing was linked or executed"
+            echo "- AArch64: compile-only smoke with \`aarch64-linux-gnu-g++\`; objects verified as ELF64/AArch64; nothing was linked or executed"
             echo "- no .so, no AMR, no device-ABI/TLS claim from this run"
             echo
             echo "## Host CTest tail"
@@ -185,7 +186,7 @@ jobs:
             echo
             echo "## AArch64 object verification"
             echo '```'
-            grep -E '^(## |Class:|Data:|OS/ABI:|Type:|Machine:|ELF )' ci-evidence/aarch64-readelf.txt
+            grep -E '^ *(Class:|Data:|OS/ABI:|Type:|Machine:|## )|^build-cross/.*ELF ' ci-evidence/aarch64-readelf.txt
             echo '```'
           } > ci-evidence/summary.md
           cat ci-evidence/summary.md >> "$GITHUB_STEP_SUMMARY"
