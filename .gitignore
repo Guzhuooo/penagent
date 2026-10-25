@@ -1,0 +1,22 @@
+# Local runtime/build evidence; publish only specifically reviewed artifacts.
+.zcode/
+app/.falcon_/
+app/*.amr
+app/artifacts/
+app/node_modules/
+node_modules/
+**/__pycache__/
+*.pyc
+
+# SDK/sysroot/toolchain redistribution needs explicit license/scope approval.
+native/sdk/
+native/build*/
+native/bundles/
+*.so
+
+# Never include local credentials or secrets in an eventual repository.
+.env
+.env.local
+.env.*.local
+*.key
+*.pem

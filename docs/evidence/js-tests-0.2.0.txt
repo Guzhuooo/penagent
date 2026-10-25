@@ -1,0 +1,488 @@
+PASS pickStoredValue 兼容多种回调形态
+PASS fromStatus 全映射
+PASS AppError 默认消息与可重试判断
+PASS parseInputResult 归一化与 uuid 校验
+PASS normalizeText 兼容 string/{value}/{text}/数字/null
+
+ALL 5 TESTS PASSED
+TAP version 13
+# Subtest: real net adapter composes with core for a Chinese two-tool loop using one attempt per POST
+ok 1 - real net adapter composes with core for a Chinese two-tool loop using one attempt per POST
+  ---
+  duration_ms: 74.7237
+  ...
+# Subtest: real net adapter unknown HTTP status fails closed in core and production remains unavailable
+ok 2 - real net adapter unknown HTTP status fails closed in core and production remains unavailable
+  ---
+  duration_ms: 4.3868
+  ...
+# Subtest: real net adapter receives core cancellation and ignores a late native callback
+ok 3 - real net adapter receives core cancellation and ignores a late native callback
+  ---
+  duration_ms: 15.4824
+  ...
+# Subtest: real storage adapter preserves exactly one envelope for blank settings and complete sessions
+ok 4 - real storage adapter preserves exactly one envelope for blank settings and complete sessions
+  ---
+  duration_ms: 10.7354
+  ...
+# Subtest: queued note write rechecks cancel after the platform storage queue releases
+ok 5 - queued note write rechecks cancel after the platform storage queue releases
+  ---
+  duration_ms: 8.8661
+  ...
+# Subtest: queued note write rechecks timeout after the platform storage queue releases
+ok 6 - queued note write rechecks timeout after the platform storage queue releases
+  ---
+  duration_ms: 16.4118
+  ...
+# Subtest: real storage adapter corruption is not silently replaced with empty settings/history
+ok 7 - real storage adapter corruption is not silently replaced with empty settings/history
+  ---
+  duration_ms: 17.4427
+  ...
+# (node:34960) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: UTF-8 counts multibyte, pairs and isolated surrogates without runtime encoding APIs
+ok 8 - UTF-8 counts multibyte, pairs and isolated surrogates without runtime encoding APIs
+  ---
+  duration_ms: 6.6797
+  ...
+# Subtest: settings normalize endpoint, toggles, HTTPS, localhost fake keys and field boundaries
+ok 9 - settings normalize endpoint, toggles, HTTPS, localhost fake keys and field boundaries
+  ---
+  duration_ms: 9.2947
+  ...
+# Subtest: schema enforces every advertised constraint and rejects pollution/deep arguments
+ok 10 - schema enforces every advertised constraint and rejects pollution/deep arguments
+  ---
+  duration_ms: 5.7477
+  ...
+# Subtest: calculator grammar precedence unary decimals and finite bounded arithmetic
+ok 11 - calculator grammar precedence unary decimals and finite bounded arithmetic
+  ---
+  duration_ms: 3.6996
+  ...
+# Subtest: history groups validate IDs and trim oldest complete turns without mutating history
+ok 12 - history groups validate IDs and trim oldest complete turns without mutating history
+  ---
+  duration_ms: 4.9352
+  ...
+# Subtest: multi-tool conversation uses injected single-attempt POST and exact atomic results
+ok 13 - multi-tool conversation uses injected single-attempt POST and exact atomic results
+  ---
+  duration_ms: 12.1626
+  ...
+# Subtest: valid IDs for unknown disabled malformed tools receive one controlled error each
+ok 14 - valid IDs for unknown disabled malformed tools receive one controlled error each
+  ---
+  duration_ms: 4.7905
+  ...
+# Subtest: entire batch IDs are rejected before any note writes; history IDs cannot replay
+ok 15 - entire batch IDs are rejected before any note writes; history IDs cannot replay
+  ---
+  duration_ms: 4.9743
+  ...
+# Subtest: schemas of full batch are checked before execute; execution remains sequential
+ok 16 - schemas of full batch are checked before execute; execution remains sequential
+  ---
+  duration_ms: 3.5287
+  ...
+# Subtest: note CRUD semantics and invalid content do not write outside pa.note
+ok 17 - note CRUD semantics and invalid content do not write outside pa.note
+  ---
+  duration_ms: 9.9864
+  ...
+# Subtest: cancel after note read prevents write and subsequent tools/model requests
+ok 18 - cancel after note read prevents write and subsequent tools/model requests
+  ---
+  duration_ms: 39.1246
+  ...
+# Subtest: cancel in-flight transport clears waits and rejects late events with idempotent stop
+ok 19 - cancel in-flight transport clears waits and rejects late events with idempotent stop
+  ---
+  duration_ms: 4.0848
+  ...
+# Subtest: stop immediately cancels reserved start; replacement awaits cancellation cleanup
+ok 20 - stop immediately cancels reserved start; replacement awaits cancellation cleanup
+  ---
+  duration_ms: 4.7379
+  ...
+# Subtest: current permission is checked again after prior tool await
+ok 21 - current permission is checked again after prior tool await
+  ---
+  duration_ms: 33.7615
+  ...
+# Subtest: 6 model requests, 24 tool calls, 8 per batch and elapsed 120s are hard limits
+ok 22 - 6 model requests, 24 tool calls, 8 per batch and elapsed 120s are hard limits
+  ---
+  duration_ms: 18.8947
+  ...
+# Subtest: timeout settles a hanging model exactly once and invokes transport cancellation
+ok 23 - timeout settles a hanging model exactly once and invokes transport cancellation
+  ---
+  duration_ms: 6.4955
+  ...
+# (node:26436) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: tool timeout prevents delayed write and produces one bounded error result
+ok 24 - tool timeout prevents delayed write and produces one bounded error result
+  ---
+  duration_ms: 34.3919
+  ...
+# Subtest: POST failures never retry and never expose raw adapter messages
+ok 25 - POST failures never retry and never expose raw adapter messages
+  ---
+  duration_ms: 10.2342
+  ...
+# Subtest: response envelope unsupported content and finish reason rejected; UTF8 response byte bound
+ok 26 - response envelope unsupported content and finish reason rejected; UTF8 response byte bound
+  ---
+  duration_ms: 40.7459
+  ...
+# Subtest: tool result truncates by UTF8 and API key never enters execution context
+ok 27 - tool result truncates by UTF8 and API key never enters execution context
+  ---
+  duration_ms: 3.2419
+  ...
+# Subtest: HEAD allowlist and fixed exec presets enforce exact params and shell quoting
+ok 28 - HEAD allowlist and fixed exec presets enforce exact params and shell quoting
+  ---
+  duration_ms: 11.1268
+  ...
+# Subtest: exec defaults off and blocking adapters cannot execute even with user toggle
+ok 29 - exec defaults off and blocking adapters cannot execute even with user toggle
+  ---
+  duration_ms: 9.0942
+  ...
+# Subtest: settings optional key persistence clears old key readback; queue survives failure
+ok 30 - settings optional key persistence clears old key readback; queue survives failure
+  ---
+  duration_ms: 10.2018
+  ...
+# Subtest: damaged versioned storage and false success/readback mismatch fail explicitly
+ok 31 - damaged versioned storage and false success/readback mismatch fail explicitly
+  ---
+  duration_ms: 2.8799
+  ...
+# Subtest: chunked sessions snapshot queued input and recover old committed revision after interrupted write
+ok 32 - chunked sessions snapshot queued input and recover old committed revision after interrupted write
+  ---
+  duration_ms: 47.1993
+  ...
+# Subtest: timed-out tool invokes cancellation hooks before continuing the model loop
+ok 33 - timed-out tool invokes cancellation hooks before continuing the model loop
+  ---
+  duration_ms: 7.9925
+  ...
+# Subtest: replacement run waits for timeout cleanup even after first run has settled
+ok 34 - replacement run waits for timeout cleanup even after first run has settled
+  ---
+  duration_ms: 4.0243
+  ...
+# Subtest: session capacity refuses excess history without deleting committed sessions
+ok 35 - session capacity refuses excess history without deleting committed sessions
+  ---
+  duration_ms: 39.3934
+  ...
+# Subtest: blank defaults load/save and partial settings remain editable, but sending fails CONFIG_ERROR before transport
+ok 36 - blank defaults load/save and partial settings remain editable, but sending fails CONFIG_ERROR before transport
+  ---
+  duration_ms: 2.7886
+  ...
+# Subtest: client passes explicit development mode and shared cancellation signal to requestJson
+ok 37 - client passes explicit development mode and shared cancellation signal to requestJson
+  ---
+  duration_ms: 1.6113
+  ...
+# Subtest: actual HTTP status is mandatory even for valid parsed JSON and unknown status fails closed
+ok 38 - actual HTTP status is mandatory even for valid parsed JSON and unknown status fails closed
+  ---
+  duration_ms: 7.5692
+  ...
+# Subtest: signal-only transport timeout starts cleanup before replacement can send
+ok 39 - signal-only transport timeout starts cleanup before replacement can send
+  ---
+  duration_ms: 2.8935
+  ...
+# Subtest: run snapshots caller history before awaiting start or previous cleanup
+ok 40 - run snapshots caller history before awaiting start or previous cleanup
+  ---
+  duration_ms: 1.6439
+  ...
+# Subtest: cancelled reserved start returns a complete detached result
+ok 41 - cancelled reserved start returns a complete detached result
+  ---
+  duration_ms: 0.7038
+  ...
+# Subtest: corrupt settings/index/chunks reject with controlled storage errors instead of becoming empty history
+ok 42 - corrupt settings/index/chunks reject with controlled storage errors instead of becoming empty history
+  ---
+  duration_ms: 3.2252
+  ...
+# Subtest: failed settings save retains retryable memory settings, and stale reads cannot replace newer settings
+ok 43 - failed settings save retains retryable memory settings, and stale reads cannot replace newer settings
+  ---
+  duration_ms: 3.9721
+  ...
+# Subtest: failed write dirty state is not cleared by an unrelated successful write
+ok 44 - failed write dirty state is not cleared by an unrelated successful write
+  ---
+  duration_ms: 0.9095
+  ...
+# Subtest: cancel during synchronous adapter entry still cancels its subsequently returned transport handle once
+ok 45 - cancel during synchronous adapter entry still cancels its subsequently returned transport handle once
+  ---
+  duration_ms: 1.5145
+  ...
+# Subtest: stop while timed-out tool cleanup is pending invokes each cancellation handler once
+ok 46 - stop while timed-out tool cleanup is pending invokes each cancellation handler once
+  ---
+  duration_ms: 3.509
+  ...
+# Subtest: partial tool group never enters sendable history; cancellation preserves completed executions as pending only
+ok 47 - partial tool group never enters sendable history; cancellation preserves completed executions as pending only
+  ---
+  duration_ms: 40.9674
+  ...
+# Subtest: over-remaining tool batches fail before execution, and error results consume the 24-call budget
+ok 48 - over-remaining tool batches fail before execution, and error results consume the 24-call budget
+  ---
+  duration_ms: 16.0118
+  ...
+# Subtest: aggregate and per-session limits refuse excess bytes before any chunk write
+ok 49 - aggregate and per-session limits refuse excess bytes before any chunk write
+  ---
+  duration_ms: 562.3919
+  ...
+# Subtest: cancelled partial note group IDs cannot replay on the same runner without a persistence hook
+ok 50 - cancelled partial note group IDs cannot replay on the same runner without a persistence hook
+  ---
+  duration_ms: 2.2984
+  ...
+# Subtest: an explicit empty seed without a durable hook cannot bypass the same-runner cancelled ledger
+ok 51 - an explicit empty seed without a durable hook cannot bypass the same-runner cancelled ledger
+  ---
+  duration_ms: 1.1132
+  ...
+# Subtest: beforeToolBatch must durably reserve the entire batch before first execute and never enters model context
+ok 52 - beforeToolBatch must durably reserve the entire batch before first execute and never enters model context
+  ---
+  duration_ms: 1.6625
+  ...
+# Subtest: batch reservation save failure fails closed, returns reserved IDs and does not expose raw errors
+ok 53 - batch reservation save failure fails closed, returns reserved IDs and does not expose raw errors
+  ---
+  duration_ms: 0.94
+  ...
+# Subtest: cancellation while reserving a tool batch never executes even after the save resolves
+ok 54 - cancellation while reserving a tool batch never executes even after the save resolves
+  ---
+  duration_ms: 5.3403
+  ...
+# Subtest: session audit survives reload and seeds replay protection while coexisting with complete history IDs
+ok 55 - session audit survives reload and seeds replay protection while coexisting with complete history IDs
+  ---
+  duration_ms: 3.7526
+  ...
+# Subtest: strict bounded tool audit rejects duplicate IDs, unknown statuses, arguments and oversized results
+ok 56 - strict bounded tool audit rejects duplicate IDs, unknown statuses, arguments and oversized results
+  ---
+  duration_ms: 3.5977
+  ...
+# Subtest: ledger seed validates before transport, snapshots IDs, and refuses whole batches beyond 256 without evicting IDs
+ok 57 - ledger seed validates before transport, snapshots IDs, and refuses whole batches beyond 256 without evicting IDs
+  ---
+  duration_ms: 3.206
+  ...
+# Subtest: session saves cannot silently erase or rename reserved audit IDs, even with a newer timestamp
+ok 58 - session saves cannot silently erase or rename reserved audit IDs, even with a newer timestamp
+  ---
+  duration_ms: 1.6089
+  ...
+# Subtest: reservation hook false fails closed and mutating its snapshot cannot change executable tool arguments
+ok 59 - reservation hook false fails closed and mutating its snapshot cannot change executable tool arguments
+  ---
+  duration_ms: 2.2235
+  ...
+# Subtest: all runtime sources remain pure and avoid unsupported encoding/dynamic execution/platform imports
+ok 60 - all runtime sources remain pure and avoid unsupported encoding/dynamic execution/platform imports
+  ---
+  duration_ms: 14.709
+  ...
+# Subtest: real local HTTP model/tool/model roundtrip and settings/session restore
+ok 61 - real local HTTP model/tool/model roundtrip and settings/session restore
+  ---
+  duration_ms: 440.3258
+  ...
+# Subtest: mock echo reports shape only, never reflects credentials or request text
+ok 62 - mock echo reports shape only, never reflects credentials or request text
+  ---
+  duration_ms: 36.3413
+  ...
+# Subtest: POST uses flat JSON envelope, singular header and object data exactly once
+ok 63 - POST uses flat JSON envelope, singular header and object data exactly once
+  ---
+  duration_ms: 15.8688
+  ...
+# Subtest: missing HTTP status remains unknown, business status is not HTTP status
+ok 64 - missing HTTP status remains unknown, business status is not HTTP status
+  ---
+  duration_ms: 0.7714
+  ...
+# Subtest: parse and transport failures send one POST and never log body/key/URL
+ok 65 - parse and transport failures send one POST and never log body/key/URL
+  ---
+  duration_ms: 5.2635
+  ...
+# Subtest: UTF-8 response byte limit accepts Chinese and bounds bytes, not code units
+ok 66 - UTF-8 response byte limit accepts Chinese and bounds bytes, not code units
+  ---
+  duration_ms: 2.0742
+  ...
+# Subtest: unsafe endpoints and credentials are rejected before native invocation
+ok 67 - unsafe endpoints and credentials are rejected before native invocation
+  ---
+  duration_ms: 3.9933
+  ...
+# Subtest: cancel drops late callbacks, removes subscriptions and prevents another physical request
+ok 68 - cancel drops late callbacks, removes subscriptions and prevents another physical request
+  ---
+  duration_ms: 4.7969
+  ...
+# Subtest: timeout is logical, no retry; native callback releases the in-flight guard
+ok 69 - timeout is logical, no retry; native callback releases the in-flight guard
+  ---
+  duration_ms: 55.6952
+  ...
+# Subtest: UI layout uses only relative length units, including inline geometry paths
+ok 70 - UI layout uses only relative length units, including inline geometry paths
+  ---
+  duration_ms: 29.6026
+  ...
+# Subtest: platform access is composed through services; pure components cannot import business layers
+ok 71 - platform access is composed through services; pure components cannot import business layers
+  ---
+  duration_ms: 4.3691
+  ...
+# Subtest: single profile configures viewport before pages render; production defaults never contain mock LAN identity
+ok 72 - single profile configures viewport before pages render; production defaults never contain mock LAN identity
+  ---
+  duration_ms: 1.6216
+  ...
+# (node:9300) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: ordinary probe JSON and core envelopes round-trip without adding a wrapper; inputs snapshot before queue
+ok 73 - ordinary probe JSON and core envelopes round-trip without adding a wrapper; inputs snapshot before queue
+  ---
+  duration_ms: 15.9491
+  ...
+# Subtest: documented get callback strings, object/array wrappers, keyed entries and empty misses normalize
+ok 74 - documented get callback strings, object/array wrappers, keyed entries and empty misses normalize
+  ---
+  duration_ms: 5.7206
+  ...
+# Subtest: corrupt JSON, invalid callback types, failure metadata and ambiguous data reject instead of fallback
+ok 75 - corrupt JSON, invalid callback types, failure metadata and ambiguous data reject instead of fallback
+  ---
+  duration_ms: 8.1369
+  ...
+# Subtest: legacy double core envelopes and old probe wrappers remain readable without destructive migration
+ok 76 - legacy double core envelopes and old probe wrappers remain readable without destructive migration
+  ---
+  duration_ms: 1.891
+  ...
+# Subtest: reads wait for queued verified writes, preserve write order and queue survives readback failure
+ok 77 - reads wait for queued verified writes, preserve write order and queue survives readback failure
+  ---
+  duration_ms: 5.5385
+  ...
+# Subtest: missing APIs, thrown native errors and explicit set failure are controlled, never logged
+ok 78 - missing APIs, thrown native errors and explicit set failure are controlled, never logged
+  ---
+  duration_ms: 3.102
+  ...
+# Subtest: bounded native waits settle once; late timed-out writes block newer writes until acknowledgement
+ok 79 - bounded native waits settle once; late timed-out writes block newer writes until acknowledgement
+  ---
+  duration_ms: 4.5738
+  ...
+# Subtest: read timeouts settle once, discard late results and leave the serial queue usable
+ok 80 - read timeouts settle once, discard late results and leave the serial queue usable
+  ---
+  duration_ms: 3.3674
+  ...
+# Subtest: invalid JSON writes and UTF8 oversize fail before platform calls
+ok 81 - invalid JSON writes and UTF8 oversize fail before platform calls
+  ---
+  duration_ms: 9.6034
+  ...
+# Subtest: first send snapshots original draft before creating its initial session
+ok 82 - first send snapshots original draft before creating its initial session
+  ---
+  duration_ms: 18.4273
+  ...
+# Subtest: stop during deferred prior cleanup prevents reserved send from creating a POST
+ok 83 - stop during deferred prior cleanup prevents reserved send from creating a POST
+  ---
+  duration_ms: 5.8994
+  ...
+# Subtest: stop persists already completed tool groups and reserved audit before switching away
+ok 84 - stop persists already completed tool groups and reserved audit before switching away
+  ---
+  duration_ms: 6.4008
+  ...
+# Subtest: send supersedes an earlier new-session transition without dropping the original draft
+ok 85 - send supersedes an earlier new-session transition without dropping the original draft
+  ---
+  duration_ms: 4.5873
+  ...
+# Subtest: stop during session creation preserves draft and never sends
+ok 86 - stop during session creation preserves draft and never sends
+  ---
+  duration_ms: 4.2473
+  ...
+# Subtest: page reserves audit durably before a note effect and rejects replay after restart
+ok 87 - page reserves audit durably before a note effect and rejects replay after restart
+  ---
+  duration_ms: 37.8663
+  ...
+# Subtest: stop while reservation save is pending prevents tool effects and keeps cancelled audit
+ok 88 - stop while reservation save is pending prevents tool effects and keeps cancelled audit
+  ---
+  duration_ms: 11.4977
+  ...
+# Subtest: settings save and clear are disabled until initial load completes; interrupted load is retried
+ok 89 - settings save and clear are disabled until initial load completes; interrupted load is retried
+  ---
+  duration_ms: 7.3193
+  ...
+# Subtest: chat stop discards late responses/events and leaves pending tool cards cancelled
+ok 90 - chat stop discards late responses/events and leaves pending tool cards cancelled
+  ---
+  duration_ms: 18.3409
+  ...
+# Subtest: IME hide preserves active run while real unload stops exactly once
+ok 91 - IME hide preserves active run while real unload stops exactly once
+  ---
+  duration_ms: 6.1477
+  ...
+# Subtest: only confirmed IME edits change draft; dirty sessions cannot be switched away
+ok 92 - only confirmed IME edits change draft; dirty sessions cannot be switched away
+  ---
+  duration_ms: 7.4332
+  ...
+# Subtest: settings requires plaintext consent and clear-key save removes persisted permission
+ok 93 - settings requires plaintext consent and clear-key save removes persisted permission
+  ---
+  duration_ms: 5.6733
+  ...
+1..93
+# tests 93
+# suites 0
+# pass 93
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1627.1604

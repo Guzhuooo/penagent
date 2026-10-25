@@ -1,0 +1,15 @@
+
+> penagent@0.2.0 build
+> aiot-cli -q -p
+
+cli版本: aiot-vue-cli@1.0.32
+正在执行 b 
+(node:11640) [DEP0111] DeprecationWarning: Access to process.binding('http_parser') is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:11640) [DEP0111] DeprecationWarning: Access to process.binding('http_parser') is deprecated.
+[33mWARNING: 找不到theme "theme-default"，请检查 falcon-ui 是否安装，路径：D:\penagent\app\node_modules\falcon-ui\src\styles\theme-default\theme.config.js[0m
+[33m未找到以下模块,可能会导致应用运行时异常(如模块为原生模块请忽略):
+global
+[0m
+[32m应用构建成功,目录: D:\penagent\app\.falcon_[0m
+[32m打包成功,路径:D:\penagent\app\8002026100700001.0_2_0.amr[0m

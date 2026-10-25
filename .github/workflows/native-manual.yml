@@ -1,0 +1,70 @@
+name: Native reviewed manual build
+
+# Preparation only. ci-policy.json is deliberately disabled pending explicit
+# owner/repo + visibility + source/artifact scope + immutable bundle approval.
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_url:
+        description: Approved public content-addressed HTTPS bundle URL (no credentials/query)
+        required: true
+        type: string
+      bundle_sha256:
+        description: Approved lowercase SHA-256 (must match reviewed ci-policy.json)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-manual-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native:
+    # This environment must have required human reviewers and no SDK/API secrets.
+    environment: native-reviewed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+    steps:
+      - name: Check out exact dispatch source revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+
+      - name: Validate helper scripts and fail-closed policy contracts (no C/C++)
+        run: python3 -B -m unittest discover -s tools/tests -p 'test_native_ci.py'
+
+      - name: Authorize, fetch approved bundle, test host core and audit AArch64 module
+        id: native
+        # Read inputs from GITHUB_EVENT_PATH, not shell interpolation or step env
+        # (the Actions runner prints step env before our validator can reject it).
+        run: >-
+          python3 -B tools/native-ci.py
+          --repo "$GITHUB_WORKSPACE"
+          --work "$RUNNER_TEMP/penagent-native-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+
+      - name: Upload only reviewed staged artifact names after every gate succeeds
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: httpx-${{ github.sha }}
+          path: |
+            ${{ steps.native.outputs.artifact_dir }}/libjsapi_httpx.so
+            ${{ steps.native.outputs.artifact_dir }}/manifest.json
+            ${{ steps.native.outputs.artifact_dir }}/SHA256SUMS
+            ${{ steps.native.outputs.artifact_dir }}/build.log
+            ${{ steps.native.outputs.artifact_dir }}/link-command.json
+            ${{ steps.native.outputs.artifact_dir }}/elf-report.json
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 7
+          compression-level: 0

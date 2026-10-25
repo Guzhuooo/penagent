@@ -1,0 +1,15 @@
+{
+  "pages": {
+    "index": "pages/index/index.js",
+    "settings": "pages/settings/settings.js",
+    "probe": "pages/probe/probe.js"
+  },
+  "options": {
+    "style": {
+      "lessPaths": [
+        "styles"
+      ]
+    },
+    "alias": {}
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "penagent",
+  "appid": "8002026100700001",
+  "version": "0.2.0",
+  "description": "Guzhuooo Agent · 有道词典笔 Y02 轻量 LLM Agent Harness",
+  "icon": "icon.png",
+  "type": "module",
+  "quickjs": {
+    "version": "20200705",
+    "bigNum": false
+  },
+  "scripts": {
+    "build": "aiot-cli -q -p",
+    "build:js": "aiot-cli -p",
+    "build:prod": "aiot-cli -c -q -p",
+    "check": "aiot-cli check",
+    "test": "node test/all.mjs",
+    "mock": "node ../tools/mock-openai.mjs"
+  }
+}
