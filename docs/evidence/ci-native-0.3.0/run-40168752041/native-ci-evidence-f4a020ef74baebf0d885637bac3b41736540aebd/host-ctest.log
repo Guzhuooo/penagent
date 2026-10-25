@@ -1,0 +1,8 @@
+Internal ctest changing into directory: /home/runner/work/penagent/penagent/build-host
+Test project /home/runner/work/penagent/penagent/build-host
+    Start 1: httpx_core
+1/1 Test #1: httpx_core .......................   Passed    1.63 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   1.89 sec

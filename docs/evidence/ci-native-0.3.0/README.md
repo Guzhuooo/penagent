@@ -21,6 +21,7 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
 | run id | 触发 | commit | JS 测试 | 策略测试 | 宿主 CTest | AArch64 冒烟 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [40168576908](https://github.com/Guzhuooo/penagent/actions/runs/40168576908) | push | `e6f0832` | 93/93 通过 | 22/22 通过 | 1/1 通过（1.63s） | 2 个目标文件 ELF64/AArch64 | 绿 |
+| [40168752041](https://github.com/Guzhuooo/penagent/actions/runs/40168752041) | push | `f4a020e` | 93/93 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.63s） | 2 个目标文件 ELF64/AArch64，SHA-256 与上次一致 | 绿 |
 
 明细见各 `run-<id>.md` 与对应 `run-<id>/` 目录。
 

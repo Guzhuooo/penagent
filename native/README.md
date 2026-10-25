@@ -9,7 +9,12 @@
   public 可见性未授权，仓库实际为 private。
 - 新增实用型 `.github/workflows/native-compile.yml`，已在 GitHub Actions 真实跑绿：
   JS 测试、纯 Python 策略合同测试、宿主 CMake 编译 + CTest、AArch64 compile-only
-  冒烟。运行记录与下载的 artifact 见 `docs/evidence/ci-native-0.3.0/`。
+  冒烟。已绿运行：run
+  [40168576908](https://github.com/Guzhuooo/penagent/actions/runs/40168576908)
+  @ `e6f0832`（首次）与 run
+  [40168752041](https://github.com/Guzhuooo/penagent/actions/runs/40168752041)
+  @ `f4a020e`；两次两个 job 均成功，CTest 1/1 通过，AArch64 目标文件 SHA-256 一致。
+  逐 run 明细、ctest 输出与下载的 artifact 见 `docs/evidence/ci-native-0.3.0/`。
   **本机从未执行** CMake、编译器或 CTest。
 - **仍阻塞**：设备 `.so` 的链接/交付需要获批的固定 toolchain + SDK + sysroot bundle
   （来源、revision、SHA-256、许可、artifact 披露范围均未批准且不可下载），因此
