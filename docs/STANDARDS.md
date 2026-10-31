@@ -100,6 +100,7 @@
 - 归一化 status、正文、transport / TLS / timeout / cancellation 错误；未知 HTTP 状态必须标 unknown/null，禁止伪造 200。flat 仅接受 200/201 而成功只返回 `{result:'response text'}`，无 HTTP status；错误 `{result:{errorMessage}}` 和 proxy error 3 均非 HTTP 状态，禁止 scrape/regex 错误文本或信任正文自报状态。正文类型和 UTF-8 正确处理，禁止用 ASCII 占比拒绝中文或用字符串 length 当字节数。
 - 使用稳定错误码（NET_TIMEOUT、NET_TRANSPORT、TLS_ERROR、HTTP_ERROR、PARSE_ERROR、CAPABILITY_UNAVAILABLE、LIMIT_REACHED、CANCELLED、STORAGE_ERROR），日志只记受控 metadata。不吞错误；预期取消可静默显示取消状态。
 - 开发模式（仅 `developmentMode:true` + 回环/私网 host + 合成 key）允许经 `services/net/dev.js` 用设备 curl 获取真实 HTTP status 与响应，必须同时具备 `-m` 与 `/bin/timeout` 限制、响应大小上限、临时文件清理，且绝不记录 URL query/body/header/key。该通道不是生产安全 adapter，不得据此解锁真实 endpoint；生产/非合成流量仍走 fail-closed 路径。
+- 生产 transport 使用 native `httpx`（0.4.0）：动态 `import('httpx')`，要求 TLS peer/hostname 校验、禁 redirect、真实整数 HTTP status、caller timeout 与 cancelAll；native 缺失时必须 fail closed，不得静默退回 flat。`allowInsecureHttp` 只允许显式 development 的私网/回环 host。AMR 中的 `libs/libjsapi_httpx.so` 必须由 `verify-amr.py --native-sha256` 校验唯一路径、ELF64 little-endian AArch64 与 SHA；AMR 内 native 存在本身不等于设备加载/TLS/取消通过。
 
 ## 6. OpenAI 协议与有限工具循环
 
@@ -207,6 +208,7 @@ execShell 默认关闭，启用也只能调用**项目预设的只读操作**。
 - 构建 sysroot = 工具链 dev 文件 ∪ 设备库覆盖；设备同名库优先，curl 头文件必须精确匹配设备 7.79.1（curlver.h 0x074f01）；所有链接/ELF 检查只在 Actions。
 - 产物必须通过 fail-closed 静态审计：ELF64 LE AArch64 DYN、SONAME、`custom_init_jsapis` 导出、无 PT_INTERP/RPATH/RUNPATH/TEXTREL、DT_NEEDED 每项对应设备 provider SHA/SONAME、GLIBC/GLIBCXX/CXXABI/GCC 需求 ≤ 设备最大值。静态审计通过不等于设备加载/TLS/取消/线程兼容，必须继续真机验证。
 - `native-manual.yml` + `ci-policy.json` 的正式发布通道保持 disabled，直到具体 vendor bundle 与 artifact 披露范围获批；从真机自采 bundle 构建出的 `.so` 未打进 AMR/未加载前不得声称可用 native。
+- 0.4.0 起允许把已审计 `.so` 打进适用 profile 的 AMR：必须固定 `.so` SHA、用 `verify-amr.py --native-sha256` 校验唯一 native 库与 AArch64 ELF、在 app composition 中显式使用 native transport，并在真机验证模块加载、原生 HTTPS status、过期/无效证书拒绝、取消/超时和回退路径。真机通过仍未覆盖真实 API 账户/计费/所有固件，不得把合成 LAN mock 或单次证书探针当作生产验收。
 
 ## 12. 构建、包与安装
 

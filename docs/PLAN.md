@@ -148,6 +148,23 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
   `ci-policy.json` 保持 disabled，正式发布仍需获批 vendor bundle。详见
   `docs/VALIDATION.md`、`native/README.md`、`docs/evidence/ci-native-0.3.0/`。
 
+### 2.8 0.4.0 可用版本：native transport 进 AMR 与真机验证
+
+- 为对齐 core 2 MiB request 预算，`native/src/httpx_core.h` 的 `kMaxBody` 提升到 2 MiB，Actions
+  run 41180136061 重建 `.so`（488,520 B / SHA `970b6a33…10b4a6`），静态审计保持通过。
+- `app/libs/libjsapi_httpx.so` 被 aiot-cli 自动打入 AMR；新增 `app/src/services/net/native.js`
+  动态 `import('httpx')`，把 native 真实 status/body、TLS 校验、禁 redirect、timeout、cancelAll
+  接入 core requestJson；production 优先 native，缺失时 fail closed，dev 模式回退 curl。
+  `tools/verify-amr.py --native-sha256` 对 AMR 内唯一 `.so` 做 ELF64/AArch64/SHA fail-closed 校验。
+- 真机（Y02）：0.4.0 debug 安装 ret:0；probe 原生 HTTPS POST 200 / 420 B；过期证书被拒绝为
+  `TLS_ERROR`；native transport 驱动 LAN 合成 mock 的 3 次模型请求 / 5 次 file_* 工具调用，
+  `status=completed`，keep.txt 留存、ai.txt 删除。证据 `docs/evidence/native-device-0.4.0.txt`。
+- 0.4.0 包：debug 638697 B / SHA `4ad0aac9…958cf`，production 626825 B / SHA
+  `b2f7621a…b9eff`；均含 SHA `970b6a33…` 的 native 库。最终 CI：native-compile 41181149627
+  （JS 131/131、策略 22/22、CTest 1/1）、native-device 41181149672 均绿。
+- 边界：未用真实 OpenAI endpoint/key 对话；Falcon 线程/取消全链路、IME/内存/多分辨率与正式
+  native-manual 发布链路仍未通过。
+
 ## 3. 里程碑与出口
 
 | 里程碑 | 内容 | 出口判据与当前状态 |
@@ -160,6 +177,7 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | M4 execShell + 历史持久化 | 预设只读执行器、关闭开关、审计；会话列表、分块历史、可靠串行保存 | 注入拒绝与正确 quoting、关闭/允许用例；不伪造 stdout / 取消；重启读回、断写恢复、连续保存不乱序；两次进出无累积 |
 | M6 自造工具 / 识别 / 工作区文件执行（0.3.0 新增） | recipe 元工具、pa.customTools、动态 registry、工具识别、file_* 工具、工作区适配器、设置开关、开发模式 curl 传输、工具/工作区页面 | 0.3.0 宿主 121/121 + legacy 5/5 + Python 22/22；Y02 真机安装、自检 9 步 ok、开发模式 AI 文件测试 completed（keep.txt 留存 / ai.txt 删除）；真实 endpoint 与生产安全 network adapter 仍未通过 |
 | M7 组件高度门禁 + native 2018 工具链/真机 sysroot（0.3.1 新增） | 154 条尺寸声明审计与严格 source-contract 门禁；0.3.1 AMR；真机采集 sysroot bundle；ubuntu:18.04 GCC 7.5.0 AArch64 交叉工具链；Actions 构建 + ELF/ABI 审计 | 0.3.1 宿主 126/126 + 5/5 + Python 22/22；两包构建/校验/真机安装；native run 41179283105/41179509958 绿，`.so` 488,520 B / SHA 22d4e811…，静态审计通过；未打进 AMR/未真机加载，发布链路仍需获批 vendor bundle |
+| M8 可用版本：native transport 进 AMR + 真机验证（0.4.0 新增） | `.so` 打进 AMR；native requestJson（TLS/真实 status/禁 redirect/timeout/cancelAll）；verify-amr native SHA；probe 原生 HTTPS/TLS 拒绝；native + file_* 工具闭环 | 0.4.0 宿主 131/131 + 5/5 + Python 22/22；两包 638697/626825 B 且含 `970b6a33…`；Y02 原生 HTTPS POST 200、过期证书 TLS_ERROR、AI 文件闭环 completed；真实 endpoint/真实 key 仍未验证，native-manual 仍 disabled |
 | M5 验收交付 | STANDARDS §13 完整矩阵、版本递增、AMR / 可选 `.so` SHA、逐步日志与限制说明 | 声明支持的功能/profile 对应证据齐全；未测能力明确标注，不把 mock 当真机。GitHub 发布仅在具体仓库授权内执行 |
 
 M1 的纯展示 / mock 与 M0 待办可并行；M2 生产真机 LLM 依赖 M0.5 安全通道完整通过，flat JSON POST 即使送达也不解锁。M3 纯逻辑可先用 mock，真机闭环依赖 M2。M4 依赖 M1 存储边界和 M3 参数 / 权限；M5 不能跳过 R06→R07 修复的 R08 最终集成回归及任何未关闭门槛。

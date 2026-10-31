@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-10-31 · 0.4.0：可用版本——native httpx 打进 AMR 并在真机验证
+
+### R11 · 生产 transport 切换到 native + 0.4.0 设备验收
+- **目标**：把已在 Actions 构建的 `libjsapi_httpx.so` 做成可用版本：打进 AMR、app 生产网络走 native、真机验证 TLS/status/JSON 与工具闭环。
+- **集成**：新增 `app/src/services/net/native.js`，动态 `import('httpx')` → `HttpClient.request`；返回真实 `{status,body}`，映射 native 错误码（取消/超时/TLS/过大/网络）；`allowInsecureHttp` 仅对显式 development 的私网 host；模块缺失时 production 继续 fail-closed，dev 模式回退 curl。`application.js` composition 改为 native 优先。`probe` 页增加“原生 HTTPS”和“原生 TLS 拒绝”测试；`tools/verify-amr.py` 增加 `--native-sha256` fail-closed 校验（唯一 `libs/libjsapi_httpx.so`、AArch64 ELF、SHA 匹配）。
+- **native 重建**：为对齐 core 2 MiB request 预算，将 `native/src/httpx_core.h` 的 `kMaxBody` 从 128 KiB 提升到 **2 MiB**；Actions run [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061) @`9cab02e` 绿，`.so` 488,520 B / SHA `970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6`（同尺寸，SHA 因 limit 变化）。审计仍通过。
+- **AMR**：`app/libs/libjsapi_httpx.so`（gitignore 二进制）被 aiot-cli 自动复制进 `.falcon_/libs` 并列入 manifest cert；0.4.0 debug **638697 B / SHA 4ad0aac9…958cf**，production **626825 B / SHA b2f7621a…b9eff**。`verify-amr.py --native-sha256 970b6a…` 两包通过（11 资源，唯一 native 库）。
+- **真机**（Y02 / ADB `<device-serial>` / 0.4.0 debug，安装 ret:0）：
+  - probe “原生 HTTPS” POST JSON 到 https://httpbin.org/post → UI `原生状态 200 · 420 B · 689 ms`，日志 `[pa:probe] native {"status":200,"bytes":420,...,"method":"POST"}`；
+  - probe “原生 TLS 拒绝” GET https://expired.badssl.com/ → UI `预期拒绝：TLS_ERROR`，日志 `native tls rejected {"code":"TLS_ERROR"}`，证明 TLS peer/hostname 校验生效；
+  - 开发模式 LAN mock：native transport 驱动 3 次模型请求 / 5 次 file_* 工具调用，`[pa:workspace] ai-file-test {"status":"completed","toolCalls":5}`，`notes/keep.txt` 留存、`notes/ai.txt` 删除；无 dev curl 日志，说明走 native。
+  - 取证后恢复设备空白生产设置（无 key/URL/dev，file_exec=false）、清理工作区并停止 mock。
+- **失败/修复**：native 错误码最初以整数暴露，映射只按字符串导致 TLS 被误报 `NET_TRANSPORT`；增加 1–10 数字码映射后 TLS 正确为 `TLS_ERROR`。probe 按钮触摸坐标在 scroller 底部有偏移，重新定位后取证。
+- **最终 CI**：commit `acabee7` 上 `native-compile` run 41181149627 绿（JS **131/131**、策略 22/22、CTest 1/1、AArch64 smoke），`native-device` run 41181149672 绿（`.so` 970b6a 可复现）；证据 `docs/evidence/ci-native-0.3.0/`。
+- **仍未验证**：真实 OpenAI-compatible endpoint + 真实 key；Falcon 线程/取消全链路；真实 endpoint 工具循环；IME/内存/多分辨率；正式 native-manual 发布链路仍 disabled。
+- **提交**：`acabee7`（0.4.0 可用版），证据 `docs/evidence/native-device-0.4.0.txt`、`app/artifacts/0.4.0/`。
+
+---
+
 ## 2026-10-31 · 0.3.1：UI 高度 vh/vw 审计、真机 sysroot + 2018 工具链 native 构建
 
 ### R10 · 组件高度门禁与 native device build
