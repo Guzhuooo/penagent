@@ -153,14 +153,16 @@ def numeric(version):
 def dynamic_symbols(text):
     defined, undefined = [], []
     for line in text.splitlines():
-        match = re.match(r"\s*\d+:\s+([0-9a-fA-F]+)\s+\d+\s+(\w+)\s+(\w+)\s+(\S+)\s+(\S+)\s+(.*)$", line)
+        match = re.match(
+            r"\s*\d+:\s+([0-9a-fA-F]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*(.*)$", line)
         if not match:
             continue
-        _, _, kind, _, _, name = match.groups()
-        match_section = re.search(r"^\s*\d+:\s+[0-9a-fA-F]+\s+\d+\s+\w+\s+\w+\s+([A-Za-z0-9_.]+)", line)
-        if kind == "UND":
+        _value, _size, kind, bind, _vis, ndx, name = match.groups()
+        if not name:
+            continue
+        if ndx == "UND":
             undefined.append(name)
-        elif kind in ("FUNC", "OBJECT") and match_section:
+        elif kind in ("FUNC", "OBJECT") and bind != "LOCAL":
             defined.append(name)
     return defined, undefined
 
@@ -197,7 +199,9 @@ def audit(manifest, bundle, artifact, report):
 
     providers = {}
     for library in manifest["libraries"]:
-        providers[library["soname"]] = library
+        # DT_NEEDED uses the SONAME when the library has one; the AArch64 dynamic
+        # loader itself has no SONAME, so fall back to its file name.
+        providers[library.get("soname") or library["name"]] = library
     provider_reports = {}
     provided_versions = set()
     for name in needed:
@@ -209,8 +213,13 @@ def audit(manifest, bundle, artifact, report):
         if digest != record["sha256"]:
             fail("provider SHA-256 mismatch for " + name)
         provider_dynamic = readelf.run("-d", str(path))
-        if parse_soname(provider_dynamic) != name:
-            fail("provider SONAME mismatch for " + name)
+        provider_soname = parse_soname(provider_dynamic)
+        expected_soname = record["soname"]
+        if expected_soname is not None:
+            if provider_soname != expected_soname or name != expected_soname:
+                fail("provider SONAME mismatch for " + name)
+        elif provider_soname is not None or name != record["name"]:
+            fail("provider without SONAME must be matched by file name: " + name)
         provided_versions.update(version_definitions(readelf.run("--version-info", str(path))))
         provider_reports[name] = {"sha256": digest, "device_path": record["device_path"]}
 
