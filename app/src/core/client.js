@@ -4,6 +4,7 @@ import { normalizeSettings, completionEndpoint, toolEnabled } from './config.js'
 import { validateToolBatch, trimContext } from './context.js';
 import { isObject } from './schema.js';
 import { utf8Bytes, jsonBytes } from './utf8.js';
+import { anthropicEndpoint, anthropicHeaders, buildAnthropicRequest, validateAnthropicResponse } from './anthropic.js';
 export function validateResponse(data) {
   if (!isObject(data) || !Array.isArray(data.choices) || data.choices.length !== 1) fail('PROTOCOL_ERROR');
   const choice = data.choices[0];
@@ -35,24 +36,39 @@ export function createOpenAIClient(requestJson, registry) {
       if (typeof requestJson !== 'function') fail('CAPABILITY_UNAVAILABLE');
       const tools = snapshot === undefined ? await resolveRegistry(registry) : snapshot;
       scope.check();
-      const body = {
-        model: settings.model, messages: trimContext(messages), temperature: settings.temperature,
-        max_tokens: settings.maxTokens, stream: false
-      };
-      const schemas = tools.filter(function (tool) { return toolEnabled(settings, tool.name); }).map(function (tool) {
-        return { type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } };
-      });
-      if (schemas.length) body.tools = schemas;
+      const enabledTools = tools.filter(function (tool) { return toolEnabled(settings, tool.name); });
+      const useAnthropic = settings.apiFormat === 'anthropic';
+      let body;
+      let headers;
+      let endpoint;
+      if (useAnthropic) {
+        const schemas = enabledTools.map(function (tool) {
+          return { name: tool.name, description: tool.description, parameters: tool.parameters };
+        });
+        body = buildAnthropicRequest(trimContext(messages), settings, schemas);
+        headers = anthropicHeaders(settings.apiKey);
+        endpoint = anthropicEndpoint(settings);
+      } else {
+        body = {
+          model: settings.model, messages: trimContext(messages), temperature: settings.temperature,
+          max_tokens: settings.maxTokens, stream: false
+        };
+        const schemas = enabledTools.map(function (tool) {
+          return { type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } };
+        });
+        if (schemas.length) body.tools = schemas;
+        headers = { 'Content-Type': 'application/json' };
+        if (settings.apiKey) headers.Authorization = 'Bearer ' + settings.apiKey;
+        endpoint = completionEndpoint(settings);
+      }
       const text = JSON.stringify(body);
       if (utf8Bytes(text) > LIMITS.requestBytes) fail('LIMIT_REACHED');
-      const headers = { 'Content-Type': 'application/json' };
-      if (settings.apiKey) headers.Authorization = 'Bearer ' + settings.apiKey;
       const timeout = Math.min(LIMITS.requestMs, scope.remaining());
       let response;
       try {
         response = await scope.wait(function () {
           return requestJson({
-            url: completionEndpoint(settings), method: 'POST', headers: headers, body: text,
+            url: endpoint, method: 'POST', headers: headers, body: text,
             timeout: timeout, maxResponseBytes: LIMITS.responseBytes, retries: 0,
             redirect: 'error', verifyPeer: true, verifyHost: true,
             developmentMode: settings.developmentMode, cancellation: scope.cancellation
@@ -71,7 +87,7 @@ export function createOpenAIClient(requestJson, registry) {
         if (!isObject(data)) fail('PARSE_ERROR');
         if (jsonBytes(data) > LIMITS.responseBytes) fail('LIMIT_REACHED');
       }
-      return validateResponse(data);
+      return useAnthropic ? validateAnthropicResponse(data) : validateResponse(data);
     }
   };
 }

@@ -165,6 +165,20 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 - 边界：未用真实 OpenAI endpoint/key 对话；Falcon 线程/取消全链路、IME/内存/多分辨率与正式
   native-manual 发布链路仍未通过。
 
+### 2.9 0.5.0 Anthropic Messages 与真实 endpoint 闭环
+
+- 用户提供 `https://api.yunqing.asia` 测试配置；探测确认它只支持 Anthropic Messages
+  （`/v1/messages`），`/v1/chat/completions` 404，模型为 deepseek-v4-flash/pro、deepseek-v4.1-flash。
+- 新增 `apiFormat=openai|anthropic`（设置页可切）；Anthropic 模式 `x-api-key` +
+  `anthropic-version: 2023-06-01`，把内部 OpenAI-shaped 历史转换为 `tool_use`/`tool_result`
+  blocks，thinking 块丢弃，响应映射回内部 tool_calls。请求超时升到 60s，run 预算 240s。
+- 协议测试 5 项；全套 136/136 + legacy 5/5 + Python 22/22。
+- 真机 0.5.0：真实 endpoint + deepseek-v4.1-flash 完成“调用 clock → 返回 UTC 时间”，
+  `完成 · 工具 1 · 10647 ms`；证据 `docs/evidence/real-anthropic-0.5.0.txt`。
+- 包：debug 641126 B / SHA `584124ce…af6a`，production 628708 B / SHA `f0aa5896…493b`。
+- 边界：仅一个真实账户/模型/endpoint；其它兼容服务、流式、Falcon 线程/取消、限流/长对话、
+  IME/内存/多分辨率与正式发布链路仍未验证；测试 key 已从设备清除。
+
 ## 3. 里程碑与出口
 
 | 里程碑 | 内容 | 出口判据与当前状态 |
@@ -178,6 +192,7 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | M6 自造工具 / 识别 / 工作区文件执行（0.3.0 新增） | recipe 元工具、pa.customTools、动态 registry、工具识别、file_* 工具、工作区适配器、设置开关、开发模式 curl 传输、工具/工作区页面 | 0.3.0 宿主 121/121 + legacy 5/5 + Python 22/22；Y02 真机安装、自检 9 步 ok、开发模式 AI 文件测试 completed（keep.txt 留存 / ai.txt 删除）；真实 endpoint 与生产安全 network adapter 仍未通过 |
 | M7 组件高度门禁 + native 2018 工具链/真机 sysroot（0.3.1 新增） | 154 条尺寸声明审计与严格 source-contract 门禁；0.3.1 AMR；真机采集 sysroot bundle；ubuntu:18.04 GCC 7.5.0 AArch64 交叉工具链；Actions 构建 + ELF/ABI 审计 | 0.3.1 宿主 126/126 + 5/5 + Python 22/22；两包构建/校验/真机安装；native run 41179283105/41179509958 绿，`.so` 488,520 B / SHA 22d4e811…，静态审计通过；未打进 AMR/未真机加载，发布链路仍需获批 vendor bundle |
 | M8 可用版本：native transport 进 AMR + 真机验证（0.4.0 新增） | `.so` 打进 AMR；native requestJson（TLS/真实 status/禁 redirect/timeout/cancelAll）；verify-amr native SHA；probe 原生 HTTPS/TLS 拒绝；native + file_* 工具闭环 | 0.4.0 宿主 131/131 + 5/5 + Python 22/22；两包 638697/626825 B 且含 `970b6a33…`；Y02 原生 HTTPS POST 200、过期证书 TLS_ERROR、AI 文件闭环 completed；真实 endpoint/真实 key 仍未验证，native-manual 仍 disabled |
+| M9 Anthropic Messages + 真实 endpoint 闭环（0.5.0 新增） | `apiFormat=anthropic`；/v1/messages、x-api-key、tool_use/tool_result 转换、thinking 丢弃；60s 超时/240s run；设置页切换；真实 endpoint 测试 | 0.5.0 宿主 136/136 + 5/5 + Python 22/22；Y02 真实 `api.yunqing.asia` + deepseek-v4.1-flash 完成 clock 工具闭环（工具 1、10647ms）；包 641126/628708 B；其它 provider/流式/Falcon 线程等仍未验证 |
 | M5 验收交付 | STANDARDS §13 完整矩阵、版本递增、AMR / 可选 `.so` SHA、逐步日志与限制说明 | 声明支持的功能/profile 对应证据齐全；未测能力明确标注，不把 mock 当真机。GitHub 发布仅在具体仓库授权内执行 |
 
 M1 的纯展示 / mock 与 M0 待办可并行；M2 生产真机 LLM 依赖 M0.5 安全通道完整通过，flat JSON POST 即使送达也不解锁。M3 纯逻辑可先用 mock，真机闭环依赖 M2。M4 依赖 M1 存储边界和 M3 参数 / 权限；M5 不能跳过 R06→R07 修复的 R08 最终集成回归及任何未关闭门槛。

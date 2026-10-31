@@ -101,6 +101,7 @@
 - 使用稳定错误码（NET_TIMEOUT、NET_TRANSPORT、TLS_ERROR、HTTP_ERROR、PARSE_ERROR、CAPABILITY_UNAVAILABLE、LIMIT_REACHED、CANCELLED、STORAGE_ERROR），日志只记受控 metadata。不吞错误；预期取消可静默显示取消状态。
 - 开发模式（仅 `developmentMode:true` + 回环/私网 host + 合成 key）允许经 `services/net/dev.js` 用设备 curl 获取真实 HTTP status 与响应，必须同时具备 `-m` 与 `/bin/timeout` 限制、响应大小上限、临时文件清理，且绝不记录 URL query/body/header/key。该通道不是生产安全 adapter，不得据此解锁真实 endpoint；生产/非合成流量仍走 fail-closed 路径。
 - 生产 transport 使用 native `httpx`（0.4.0）：动态 `import('httpx')`，要求 TLS peer/hostname 校验、禁 redirect、真实整数 HTTP status、caller timeout 与 cancelAll；native 缺失时必须 fail closed，不得静默退回 flat。`allowInsecureHttp` 只允许显式 development 的私网/回环 host。AMR 中的 `libs/libjsapi_httpx.so` 必须由 `verify-amr.py --native-sha256` 校验唯一路径、ELF64 little-endian AArch64 与 SHA；AMR 内 native 存在本身不等于设备加载/TLS/取消通过。
+- 双 API 格式（0.5.0）：`apiFormat=openai` 走 `/chat/completions` + Bearer；`anthropic` 走 `/v1/messages` + `x-api-key` + `anthropic-version: 2023-06-01`。内部历史始终为 OpenAI-shaped tool_calls/role:tool，Anthropic 边界负责转换为 tool_use/tool_result，thinking 类块不得进入内部历史；tool_use id/name 仍须通过内部校验。真实 key 只可在设置存储中，禁止写入源码、日志、证据、提交或截图；测试后应清除设备上的临时凭据。
 
 ## 6. OpenAI 协议与有限工具循环
 

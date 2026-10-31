@@ -5,7 +5,8 @@ export const TOOL_NAMES = Object.freeze(['clock', 'calculator', 'note', 'device_
   'file_list', 'file_read', 'file_write', 'file_delete', 'file_exec']);
 export const DEFAULT_SETTINGS = Object.freeze({
   baseUrl: '', apiKey: '', model: '', temperature: 0.7,
-  maxTokens: 1024, persistApiKey: false, execShellEnabled: false, developmentMode: false
+  maxTokens: 1024, persistApiKey: false, execShellEnabled: false, developmentMode: false,
+  apiFormat: 'openai'
 });
 // Development mocks run on this host or a private LAN peer; never on a public address.
 function developmentHost(host) {
@@ -38,6 +39,7 @@ export function normalizeSettings(input) {
   if (typeof settings.apiKey !== 'string' || settings.apiKey.length > 4096 || /[\x00-\x20\x7f]/.test(settings.apiKey)) fail('CONFIG_ERROR');
   if (typeof settings.model !== 'string' || settings.model.length > 128 || /[\x00-\x1f\x7f]/.test(settings.model)) fail('CONFIG_ERROR');
   settings.model = settings.model.trim();
+  if (settings.apiFormat !== 'openai' && settings.apiFormat !== 'anthropic') fail('CONFIG_ERROR');
   if (typeof settings.temperature !== 'number' || !Number.isFinite(settings.temperature) || settings.temperature < 0 || settings.temperature > 2) fail('CONFIG_ERROR');
   if (!Number.isInteger(settings.maxTokens) || settings.maxTokens < 1 || settings.maxTokens > 32768) fail('CONFIG_ERROR');
   if (settings.baseUrl !== '') {

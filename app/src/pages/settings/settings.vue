@@ -8,12 +8,14 @@
     </div>
     <scroller class="settings" scroll-direction="vertical">
       <text class="heading">模型连接</text>
-      <text class="warning">已确认当前平台 HTTP 通道关闭证书验证并允许重定向，也不返回真实状态码；生产请求已禁用。可保存配置，但不会发送真实密钥。</text>
+      <text class="warning">生产请求经 native httpx：TLS peer/hostname 校验、禁止重定向、真实状态码；密钥只发送到所填服务。</text>
       <div v-if="!loaded" class="choice" @click="load"><text class="choice-label">{{ loading ? '正在读取配置…' : '重新读取配置（读取成功前不能修改）' }}</text></div>
       <setting-field label="服务地址" :value="form.baseUrl" placeholder="填写 HTTPS API 地址" @edit="edit('baseUrl')" />
       <setting-field label="密钥" :value="form.apiKey ? '••••••••（已设置）' : ''" placeholder="未设置" @edit="edit('apiKey')" />
       <text class="warning">密钥在此页遮罩；系统输入界面可能显示明文，请留意周围环境。</text>
       <setting-field label="模型" :value="form.model" placeholder="填写模型名称" @edit="edit('model')" />
+      <div class="choice" @click="toggleFormat"><text class="choice-label">接口格式</text><text class="toggle-state">{{ formatLabel }}</text></div>
+      <text v-if="form.apiFormat === 'anthropic'" class="warning">Anthropic Messages：地址填根地址或 /v1，请求发往 /v1/messages；密钥以 x-api-key 发送。</text>
       <div class="choice" @click="togglePersist"><image class="toggle-icon" :src="persistIcon" mode="aspectFit"></image><text class="choice-label">记住密钥（默认仅保留在内存）</text><text class="toggle-state">{{ form.persistApiKey ? '已开启' : '已关闭' }}</text></div>
       <div v-if="confirmPersistence" class="confirmation">
         <text class="warning">设备本地以明文保存，能够读取设备数据的人可获取密钥。</text>
@@ -49,7 +51,7 @@ const TOOL_OPTIONS = [
   { id: 'file_exec', label: '执行工作区命令或文件（高风险，默认关闭）' },
 ];
 function blankForm() {
-  return { baseUrl: '', apiKey: '', model: '', temperature: 0.7, maxTokens: 1024,
+  return { baseUrl: '', apiKey: '', model: '', temperature: 0.7, maxTokens: 1024, apiFormat: 'openai',
     persistApiKey: false, execShellEnabled: false, developmentMode: false,
     tools: { clock: true, calculator: true, note: true, device_info: true, net_probe: true, execShell: false,
       file_list: true, file_read: true, file_write: true, file_delete: true, file_exec: false }, allowedProbeHosts: [] };
@@ -61,6 +63,7 @@ export default {
     // Inline PNG data URIs (assets/icons.js); device fonts cannot render glyph toggles.
     persistIcon() { return icon(this.form.persistApiKey ? 'check-on' : 'check-off'); },
     execIcon() { return icon(this.form.execShellEnabled ? 'check-on' : 'check-off'); },
+    formatLabel() { return this.form.apiFormat === 'anthropic' ? 'Anthropic' : 'OpenAI'; },
     toolIcons() {
       const icons = {};
       for (const tool of this.toolOptions) icons[tool.id] = icon(this.form.tools[tool.id] ? 'check-on' : 'check-off');
@@ -113,6 +116,7 @@ export default {
       try { await input.open({ text: value, placeholder: field === 'apiKey' ? '输入密钥（系统界面可能显示明文）' : '输入配置', maxlength: field === 'model' ? 128 : 2048, enterButtonText: '确定' }); }
       catch (error) { if (this.valid(generation)) { this.editing = null; this.notice = errorLabel(error); } }
     },
+    toggleFormat() { if (!this.canEdit()) return; this.form.apiFormat = this.form.apiFormat === 'anthropic' ? 'openai' : 'anthropic'; this.notice = '修改尚未保存'; },
     togglePersist() {
       if (!this.canEdit()) return;
       if (this.form.persistApiKey) { this.form.persistApiKey = false; this.confirmPersistence = false; this.notice = '保存后清除旧持久化密钥'; }

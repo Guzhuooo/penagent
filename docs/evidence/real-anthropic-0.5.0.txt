@@ -1,0 +1,37 @@
+0.5.0 real Anthropic endpoint test — 2026-10-31
+Profile: Y02-3562 / 4.9.7 / appid 8002026100700001 / ADB <device-serial>
+Package: 0.5.0 debug (native transport included)
+Endpoint: https://api.yunqing.asia  (Anthropic Messages API, not OpenAI /chat/completions)
+Model: deepseek-v4.1-flash
+Auth: tester-provided token, sent as x-api-key + anthropic-version: 2023-06-01
+Key handling: token was only in a temporary device prefs file for this test; it was NOT written to
+the repository, docs, logs, or screenshots. Device settings were reset to blank afterwards and the
+temporary files removed.
+
+WHY 0.5.0
+- The endpoint's /v1/models lists deepseek-v4-flash / deepseek-v4-pro / deepseek-v4.1-flash and
+  /v1/chat/completions returns 404. The endpoint speaks Anthropic Messages (/v1/messages).
+- 0.5.0 adds apiFormat=openai|anthropic. Anthropic mode posts to /v1/messages with x-api-key and
+  translates the harness's OpenAI-shaped tool_calls/role:tool history to Anthropic tool_use /
+  tool_result blocks; thinking blocks are dropped; response text/tool_use are mapped back.
+
+DEVICE RESULT (probe page -> 真实对话)
+Prompt: "请调用 clock 工具，然后只回复一句当前 UTC 时间。"
+Result on screen: 完成 · 工具 1 · 当前 UTC 时间是 2026-10-31 08:04:53。 · 10647 ms
+Meaning: native HTTPS + TLS verify + Anthropic request translation + real model response +
+          clock tool execution + tool_result follow-up + final answer all completed on the pen.
+Screenshot: app/artifacts/0.5.0/probe-real-chat.png
+
+TRANSPORT NOTES
+- request timeout raised from 20s to 60s (provider/queue can be slow); run budget 240s.
+- During repeated probing the provider transiently returned 429 Too Many Requests and 503
+  Service Unavailable (independent of the app); after cooling down the full tool loop succeeded.
+  HTTP non-2xx maps to HTTP_ERROR, not a fake success.
+- 0.4.0 had already verified native HTTPS POST 200 and expired-certificate TLS_ERROR rejection;
+  0.5.0 reuses that transport.
+
+BOUNDARIES
+- This validates one account/model/endpoint path, not every Anthropic-compatible provider.
+- Provider-side quota/availability is outside our control; 429/503 can still occur.
+- Real key was removed from device/settings after testing; user must enter their own key in Settings
+  (format = Anthropic, address = https://api.yunqing.asia, model = deepseek-v4.1-flash).

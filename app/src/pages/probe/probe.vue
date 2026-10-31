@@ -10,6 +10,7 @@
       <div class="row"><div class="button" @click="runExec"><text class="label">预设状态</text></div><text class="result">{{ execResult }}</text></div>
       <div class="row"><div class="button" @click="runNative"><text class="label">原生 HTTPS</text></div><text class="result">{{ nativeResult }}</text></div>
       <div class="row"><div class="button" @click="runNativeTls"><text class="label">原生 TLS 拒绝</text></div><text class="result">{{ nativeTlsResult }}</text></div>
+      <div class="row"><div class="button" @click="runReal"><text class="label">真实对话</text></div><text class="result">{{ realResult }}</text></div>
       <div class="units"><div class="u10"></div><div class="u20"></div><div class="u30"></div><text class="units-label">10 / 20 / 30vw，10 / 15 / 25vh</text></div>
     </scroller>
   </div>
@@ -21,13 +22,13 @@ import * as input from '../../services/input/index.js';
 import { execPreset } from '../../services/device/index.js';
 import { nativeProbe } from '../../services/net/native.js';
 import { navigate } from '../../services/navigation.js';
-import { errorLabel } from '../../services/application.js';
+import { errorLabel, getApplication } from '../../services/application.js';
 import { log } from '../../services/log/index.js';
 import { MOCK_ORIGIN } from '../../services/device/development.js';
 const MOCK_BASE = MOCK_ORIGIN;
 export default {
   name: 'ProbePage',
-  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测', nativeResult: '待测', nativeTlsResult: '待测' }; },
+  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测', nativeResult: '待测', nativeTlsResult: '待测', realResult: '待测' }; },
   mounted() {
     this.active = true; this.generation = 0; this.destroyed = false;
     this.attachInput();
@@ -108,6 +109,31 @@ export default {
         const code = (error && error.code) || 'unknown';
         this.nativeTlsResult = '预期拒绝：' + code;
         log.warn('[pa:probe] native tls rejected', { code: code });
+      }
+    },
+    async runReal() {
+      const generation = this.generation;
+      this.realResult = '请求中…';
+      const started = Date.now();
+      try {
+        const application = getApplication();
+        const settings = await application.loadSettings();
+        const result = await application.run([{ role: 'user', content: '请调用 clock 工具，然后只回复一句当前 UTC 时间。' }], settings);
+        if (!this.valid(generation)) return;
+        const messages = result.messages || [];
+        let answer = '';
+        for (let i = messages.length - 1; i >= 0; i -= 1) {
+          const message = messages[i];
+          if (message.role === 'assistant' && typeof message.content === 'string' && message.content) { answer = message.content; break; }
+        }
+        this.realResult = (result.status === 'completed' ? '完成' : '状态 ' + String(result.status) + (result.error ? ' · ' + String(result.error.code) : '')) +
+          ' · 工具 ' + String(result.toolCalls || 0) + ' · ' + (answer ? answer.slice(0, 80) : '无文本') +
+          ' · ' + (Date.now() - started) + ' ms';
+        log.warn('[pa:probe] real chat', { status: result.status, toolCalls: result.toolCalls, elapsedMs: Date.now() - started });
+      } catch (error) {
+        if (!this.valid(generation)) return;
+        this.realResult = errorLabel(error) + '（配置/网络/协议）';
+        log.warn('[pa:probe] real chat failed', { code: error && error.code });
       }
     },
   },

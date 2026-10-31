@@ -217,7 +217,7 @@ test('current permission is checked again after prior tool await', async () => {
   assert.equal(JSON.parse(result.messages.find(m => m.tool_call_id === 'policy2').content).error.code, 'TOOL_DISABLED');
 });
 
-test('6 model requests, 24 tool calls, 8 per batch and elapsed 120s are hard limits', async () => {
+test('6 model requests, 24 tool calls, 8 per batch and elapsed 240s are hard limits', async () => {
   let requests = 0;
   let harness = configuredHarness({ requestJson: async () => reply([call('r' + ++requests)]) });
   let result = await harness.run(user());
@@ -228,7 +228,7 @@ test('6 model requests, 24 tool calls, 8 per batch and elapsed 120s are hard lim
   harness = configuredHarness({ requestJson: async () => reply(Array.from({ length: 9 }, (_, i) => call('too-' + i))) });
   result = await harness.run(user()); assert.equal(result.error.code, 'LIMIT_REACHED'); assert.equal(result.toolCalls, 0);
   let time = 0; requests = 0;
-  harness = configuredHarness({ now: () => time, requestJson: async () => { requests++; time = 120001; return reply([call('late')]); } });
+  harness = configuredHarness({ now: () => time, requestJson: async () => { requests++; time = 240001; return reply([call('late')]); } });
   result = await harness.run(user()); assert.equal(result.status, 'limited'); assert.equal(requests, 1); assert.equal(result.toolCalls, 0);
 });
 

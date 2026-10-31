@@ -1,5 +1,5 @@
 export const LIMITS = Object.freeze({
-  modelRequests: 6, tools: 24, batch: 8, runMs: 120000, requestMs: 20000, toolMs: 10000,
+  modelRequests: 6, tools: 24, batch: 8, runMs: 240000, requestMs: 60000, toolMs: 10000,
   requestBytes: 2 * 1024 * 1024, responseBytes: 2 * 1024 * 1024,
   argumentBytes: 8192, resultBytes: 4096, contextMessages: 100, contextBytes: 256 * 1024,
   storageBytes: 256 * 1024, sessions: 32, sessionBytes: 1024 * 1024,

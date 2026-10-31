@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-10-31 · 0.5.0：真实 Anthropic endpoint 可用版本
+
+### R12 · Anthropic Messages 支持与真实 endpoint 工具闭环
+- **用户提供测试配置**：`ANTHROPIC_BASE_URL=https://api.yunqing.asia`、auth token（仅测试用，不写入仓库/证据/日志）、模型列表 deepseek-v4-flash/pro、deepseek-v4.1-flash。
+- **协议探测**：`GET /v1/models` 200；`POST /v1/chat/completions` 404；`POST /v1/messages`（`x-api-key` + `anthropic-version: 2023-06-01`）200。确认该服务是 Anthropic Messages 格式，不能直接用 OpenAI 客户端。
+- **实现**：新增 `app/src/core/anthropic.js`：system 合并、OpenAI-shaped `tool_calls`/role:tool → Anthropic `tool_use`/`tool_result`、thinking 块丢弃、响应文本/工具调用映射；`client.js` 按 `settings.apiFormat` 分支；设置页增加 OpenAI/Anthropic 切换，Anthropic 地址发往 `/v1/messages`、密钥以 `x-api-key` 发送。请求超时从 20s 提升到 **60s**，单次 run 预算 240s（真实 provider 排队/思考可能较慢）。
+- **协议测试**：新增 `app/test/anthropic.test.mjs` 5 项（endpoint、请求映射、thinking/tool_use 响应、headers/status、HTTP/max_tokens/畸形响应）；全套 **136/136 + legacy 5/5**，Python 22/22。
+- **真机验收**：0.5.0 debug 安装 ret:0；设置 apiFormat=anthropic、baseUrl=`https://api.yunqing.asia`、model=`deepseek-v4.1-flash`（临时 key）；probe “真实对话” 发送“请调用 clock 工具，然后只回复当前 UTC 时间”，结果 **完成 · 工具 1 · 当前 UTC 时间是 2026-10-31 08:04:53。 · 10647 ms**。证据 `docs/evidence/real-anthropic-0.5.0.txt`、`app/artifacts/0.5.0/probe-real-chat.png`。
+- **过程问题**：真实 provider 重复探测后短暂 429/503（服务端限流/不可用，非 app）；首次 20s 超时超时，提升到 60s 并冷却后成功。测试 key 仅写入临时设备 prefs、测试后清除，设备设置恢复空白；0.5.0 保留安装。
+- **产物**：0.5.0 debug **641126 B / SHA 584124ce…af6a**，production **628708 B / SHA f0aa5896…493b**，均含 native `.so` SHA `970b6a33…`；`verify-amr.py --native-sha256` 通过。
+- **边界**：只验证一个真实账户/模型/endpoint 路径；其它兼容服务、流式、Falcon 线程/取消、长对话限流、IME/内存/多分辨率仍未验证；native-manual 发布链路仍 disabled。
+
+---
+
 ## 2026-10-31 · 0.4.0：可用版本——native httpx 打进 AMR 并在真机验证
 
 ### R11 · 生产 transport 切换到 native + 0.4.0 设备验收
