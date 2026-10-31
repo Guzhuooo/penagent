@@ -14,6 +14,7 @@
 - **测试**：新增 `import-config.test.mjs`（env/direct/envelope/text/bare key/畸形/超限）；全套 **144/144 + legacy 5/5**，Python 22/22。
 - **真机**：0.6.1 debug 安装 ret:0；把 harness env JSON 放工作区 `import/config.json`，probe 导入显示 `已导入并保存 · workspace/import/config.json · baseUrl, apiKey, model, apiFormat`；设置读回 baseUrl=`https://api.yunqing.asia`、model=`deepseek-v4.1-flash`、apiFormat=`anthropic`、key 已保存。测试后清空设置/删除文件/key。
 - **问题**：设置页顶部导入按钮在真机触控测试中未命中（probe 导入路径验证通过；按钮存在，疑似滚动/触控目标问题）；后续修。`/tmp` fs 读取返回 CAPABILITY，已改为工作区优先。
+- **最终 CI**：commit `25fa2d0` 的 `native-compile` run [41190195799](https://github.com/Guzhuooo/penagent/actions/runs/41190195799) 全绿（JS 144/144、策略 22/22、CTest 1/1、AArch64 smoke）。
 - **产物**：debug **650420 B / SHA 2b496550…d866a**，production **636776 B / SHA a021319e…392775**；native `.so` 仍 `970b6a33…`。证据 `docs/evidence/native-device-0.6.1.txt`、`app/artifacts/0.6.1/`。
 
 ---

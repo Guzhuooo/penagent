@@ -1,0 +1,18 @@
+[1/4] Building CXX object CMakeFiles/httpx_core.dir/src/httpx_core.cpp.o
+/home/runner/work/penagent/penagent/native/src/httpx_core.cpp: In function ‘httpx::Response httpx::perform(Request, const std::shared_ptr<Cancellation>&)’:
+/home/runner/work/penagent/penagent/native/src/httpx_core.cpp:234:9: warning: ‘CURLOPT_PROTOCOLS’ is deprecated: since 7.85.0. Use CURLOPT_PROTOCOLS_STR [-Wdeprecated-declarations]
+  234 |     set(CURLOPT_PROTOCOLS, static_cast<long>(CURLPROTO_HTTPS | (request.allowInsecureHttp ? CURLPROTO_HTTP : 0)));
+      |         ^~~~~~~~~~~~~~~~~
+In file included from /home/runner/work/penagent/penagent/native/src/httpx_core.cpp:3:
+/usr/include/x86_64-linux-gnu/curl/curl.h:1744:3: note: declared here
+ 1744 |   CURLOPTDEPRECATED(CURLOPT_PROTOCOLS, CURLOPTTYPE_LONG, 181,
+      |   ^~~~~~~~~~~~~~~~~
+/home/runner/work/penagent/penagent/native/src/httpx_core.cpp:235:9: warning: ‘CURLOPT_REDIR_PROTOCOLS’ is deprecated: since 7.85.0. Use CURLOPT_REDIR_PROTOCOLS_STR [-Wdeprecated-declarations]
+  235 |     set(CURLOPT_REDIR_PROTOCOLS, static_cast<long>(CURLPROTO_HTTPS));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/x86_64-linux-gnu/curl/curl.h:1750:3: note: declared here
+ 1750 |   CURLOPTDEPRECATED(CURLOPT_REDIR_PROTOCOLS, CURLOPTTYPE_LONG, 182,
+      |   ^~~~~~~~~~~~~~~~~
+[2/4] Building CXX object CMakeFiles/httpx_core_tests.dir/tests/httpx_core_tests.cpp.o
+[3/4] Linking CXX static library libhttpx_core.a
+[4/4] Linking CXX executable httpx_core_tests

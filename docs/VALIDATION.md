@@ -8,7 +8,7 @@ harness 的 env JSON 后自动得到 Anthropic 地址/密钥/模型。业务限�
 
 | 检查 | 结果 / 证据 |
 |---|---|
-| JS 全量 | legacy **5/5** + Node **144/144**，0 fail；`docs/evidence/js-tests-0.6.1.txt` |
+| JS 全量 | legacy **5/5** + Node **144/144**，0 fail；`docs/evidence/js-tests-0.6.1.txt`；CI run [41190195799](https://github.com/Guzhuooo/penagent/actions/runs/41190195799) 绿 |
 | Python 策略 | **22/22** |
 | AMR | debug **650420 B / SHA `2b496550…d866a`**；production **636776 B / SHA `a021319e…392775`**；`verify-amr.py --native-sha256` 通过 |
 | 真机导入 | 把 harness env JSON 放到工作区 `import/config.json`，probe“导入配置”显示 `已导入并保存 · workspace/import/config.json · baseUrl, apiKey, model, apiFormat`；设置读回 baseUrl/model/apiFormat 正确，key 已保存 |
