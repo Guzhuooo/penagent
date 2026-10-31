@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHarness, validateHistory } from '../src/core/index.js';
+import { createHarness, validateHistory, LIMITS } from '../src/core/index.js';
 import { requestJson } from '../src/services/net/index.js';
 import { getJson, setJson, getRaw } from '../src/services/storage/index.js';
 
@@ -116,7 +116,7 @@ for (const mode of ['cancel', 'timeout']) test('queued note write rechecks ' + m
     await writeQueued;
     assert.equal(nativeWrites, 0); assert.equal(typeof releaseProbe, 'function');
     if (mode === 'cancel') await harness.stop();
-    else t.mock.timers.tick(10000);
+    else t.mock.timers.tick(LIMITS.toolMs);
     const result = await running;
     assert.equal(result.status, mode === 'cancel' ? 'cancelled' : 'completed');
     releaseProbe(); await blocked; await new Promise(resolve => setImmediate(resolve));

@@ -102,6 +102,11 @@
 - 开发模式（仅 `developmentMode:true` + 回环/私网 host + 合成 key）允许经 `services/net/dev.js` 用设备 curl 获取真实 HTTP status 与响应，必须同时具备 `-m` 与 `/bin/timeout` 限制、响应大小上限、临时文件清理，且绝不记录 URL query/body/header/key。该通道不是生产安全 adapter，不得据此解锁真实 endpoint；生产/非合成流量仍走 fail-closed 路径。
 - 生产 transport 使用 native `httpx`（0.4.0）：动态 `import('httpx')`，要求 TLS peer/hostname 校验、禁 redirect、真实整数 HTTP status、caller timeout 与 cancelAll；native 缺失时必须 fail closed，不得静默退回 flat。`allowInsecureHttp` 只允许显式 development 的私网/回环 host。AMR 中的 `libs/libjsapi_httpx.so` 必须由 `verify-amr.py --native-sha256` 校验唯一路径、ELF64 little-endian AArch64 与 SHA；AMR 内 native 存在本身不等于设备加载/TLS/取消通过。
 - 双 API 格式（0.5.0）：`apiFormat=openai` 走 `/chat/completions` + Bearer；`anthropic` 走 `/v1/messages` + `x-api-key` + `anthropic-version: 2023-06-01`。内部历史始终为 OpenAI-shaped tool_calls/role:tool，Anthropic 边界负责转换为 tool_use/tool_result，thinking 类块不得进入内部历史；tool_use id/name 仍须通过内部校验。真实 key 只可在设置存储中，禁止写入源码、日志、证据、提交或截图；测试后应清除设备上的临时凭据。
+- key 持久化（0.6.0）：用户输入的 key 默认且始终写入本机设置；更新任意设置不得清空或回退 key，唯一删除路径是显式“清除密钥”。key 仍是明文存储，设置页必须提示；日志/截图/证据不得出现 key。
+- 业务限额：不设模型请求/工具调用/批量/总时长的用户可见停止阈值；仅保留单次请求超时、单工具超时、请求/响应/存储字节上限等设备安全边界，并明确区分“安全边界”与“使用配额”。
+- 提示词：设置中的 `systemPrompt` 每轮作为 system 消息发送，不得写入显示历史；插件 prompt 追加到其后。提示词不得包含密钥；长度有界。
+- 显示：assistant 的 reasoning/thinking 只用于可折叠展示，不得回传 provider；工具调用/工具结果默认折叠；所有展示文本经轻量 Markdown→纯文本处理，不执行 HTML/Markdown。
+- 插件（0.6.0）：只接受 `penagent-plugin/1` 声明式 JSON（同 define_tool 的安全 recipe + prompt），放在应用私有工作区 `plugins/`；扫描/热加载不得执行插件内代码、动态 import、网络或文件路径；坏插件必须隔离并显示错误，不能拖垮应用。安装/卸载流程与规范见 `docs/PLUGINS.md`。
 
 ## 6. OpenAI 协议与有限工具循环
 

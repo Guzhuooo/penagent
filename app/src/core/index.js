@@ -5,11 +5,13 @@ import { createSession, createSessionStore } from './session.js';
 import { createToolRegistry } from '../tools/registry.js';
 import { createCustomToolStore, rankTools, toolCatalog } from '../tools/custom.js';
 import { createRunner } from './runner.js';
+import { createPluginStore } from '../plugins/store.js';
 export function createHarness(adapters) {
   const injected = adapters || {};
   const storage = createStorage(injected.getJson, injected.setJson);
   const sessions = createSessionStore(storage);
   const custom = createCustomToolStore(storage);
+  const plugins = createPluginStore(injected.workspace);
   let settings = normalizeSettings();
   let settingsRevision = 0;
   let settingsDirty = false;
@@ -20,11 +22,12 @@ export function createHarness(adapters) {
   // them before sending, while a bare API runner never adds a hidden storage
   // read before the first model request (which would change cancel ordering).
   function currentRegistry() {
-    if (custom.state.loaded) {
-      return custom.ensureLoaded().then(function () { return createToolRegistry(custom.records()); });
-    }
-    return Promise.resolve(createToolRegistry(custom.records()));
+    return Promise.resolve()
+      .then(function () { return custom.state.loaded ? custom.ensureLoaded() : null; })
+      .then(function () { return plugins.state().loaded ? plugins.ensureLoaded() : null; })
+      .then(function () { return createToolRegistry(custom.records(), plugins.state().loaded ? plugins.tools() : []); });
   }
+  function pluginPrompt() { return plugins.prompt(); }
   const runner = createRunner(Object.assign({}, injected, { customTools: custom }), currentRegistry, storage, function () { return settings; });
   return {
     state: runner.state,
@@ -38,7 +41,6 @@ export function createHarness(adapters) {
         if (stored === null) fail('STORAGE_ERROR');
         let normalized;
         try { normalized = normalizeSettings(stored); } catch (_) { fail('STORAGE_ERROR'); }
-        if (!normalized.persistApiKey) normalized.apiKey = settings.apiKey;
         settings = normalized;
       }
       return normalizeSettings(settings);
@@ -49,7 +51,9 @@ export function createHarness(adapters) {
       settingsDirty = true;
       const revision = ++settingsRevision;
       const saved = normalizeSettings(normalized);
-      if (!saved.persistApiKey) delete saved.apiKey;
+      // User requirement: every entered API key is persisted. Keep the key in the
+      // stored record unconditionally; clearing the field is the explicit erase.
+      saved.persistApiKey = true;
       return storage.enqueue(async function () {
         await storage.write('pa.settings', saved);
         if (revision === settingsRevision) settingsDirty = false;
@@ -65,16 +69,25 @@ export function createHarness(adapters) {
     createCustomTool: function (input) { return custom.ensureLoaded().then(function () { return custom.create(input); }); },
     deleteCustomTool: function (name) { return custom.ensureLoaded().then(function () { return custom.remove(name); }); },
     listTools: function () {
-      return custom.ensureLoaded().then(function () { return toolCatalog(createToolRegistry(custom.records())); });
-    },
-    findTools: function (query) {
-      return custom.ensureLoaded().then(function () {
-        return rankTools(toolCatalog(createToolRegistry(custom.records())), query, 5);
+      return Promise.all([custom.ensureLoaded(), plugins.ensureLoaded()]).then(function () {
+        return toolCatalog(createToolRegistry(custom.records(), plugins.tools()));
       });
     },
+    findTools: function (query) {
+      return Promise.all([custom.ensureLoaded(), plugins.ensureLoaded()]).then(function () {
+        return rankTools(toolCatalog(createToolRegistry(custom.records(), plugins.tools())), query, 5);
+      });
+    },
+    loadPlugins: function () { return plugins.ensureLoaded().then(function () { return plugins.catalog(); }); },
+    reloadPlugins: function () { return plugins.reload().then(function () { return plugins.catalog(); }); },
+    pluginCatalog: function () { return plugins.catalog(); },
+    pluginState: function () { return plugins.state(); },
     run: function (messages, input, options) {
       if (input != null) { settings = normalizeSettings(input); settingsRevision += 1; }
-      return runner.run(messages, settings, options);
+      const extra = [settings.systemPrompt, typeof pluginPrompt === 'function' ? pluginPrompt() : '']
+        .filter(function (value) { return typeof value === 'string' && value; }).join('\n\n').slice(0, 8192);
+      const runSettings = normalizeSettings(Object.assign({}, settings, { systemPrompt: extra }));
+      return runner.run(messages, runSettings, options);
     },
     stop: runner.stop,
     flush: storage.flush

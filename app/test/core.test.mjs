@@ -37,7 +37,7 @@ test('UTF-8 counts multibyte, pairs and isolated surrogates without runtime enco
 
 test('settings normalize endpoint, toggles, HTTPS, localhost fake keys and field boundaries', () => {
   assert.equal(completionEndpoint({ baseUrl: 'https://API.example/v1/chat/completions///' }), 'https://api.example/v1/chat/completions');
-  assert.equal(normalizeSettings().persistApiKey, false);
+  assert.equal(normalizeSettings().persistApiKey, true);
   assert.equal(normalizeSettings().execShellEnabled, false);
   assert.equal(normalizeSettings().tools.execShell, false);
   assert.equal(completionEndpoint({ baseUrl: 'http://127.0.0.1:8900/v1/', developmentMode: true, apiKey: 'mock-key' }), 'http://127.0.0.1:8900/v1/chat/completions');
@@ -217,19 +217,15 @@ test('current permission is checked again after prior tool await', async () => {
   assert.equal(JSON.parse(result.messages.find(m => m.tool_call_id === 'policy2').content).error.code, 'TOOL_DISABLED');
 });
 
-test('6 model requests, 24 tool calls, 8 per batch and elapsed 240s are hard limits', async () => {
+test('no business quota stops long model/tool loops; batch over old 8 is accepted', async () => {
   let requests = 0;
-  let harness = configuredHarness({ requestJson: async () => reply([call('r' + ++requests)]) });
-  let result = await harness.run(user());
-  assert.equal(result.status, 'limited'); assert.equal(requests, 6); assert.equal(result.modelRequests, 6);
-  requests = 0;
-  harness = configuredHarness({ requestJson: async () => { requests++; return reply(Array.from({ length: 8 }, (_, i) => call('b' + requests + '-' + i))); } });
-  result = await harness.run(user()); assert.equal(result.status, 'limited'); assert.equal(requests, 3); assert.equal(result.toolCalls, 24);
-  harness = configuredHarness({ requestJson: async () => reply(Array.from({ length: 9 }, (_, i) => call('too-' + i))) });
-  result = await harness.run(user()); assert.equal(result.error.code, 'LIMIT_REACHED'); assert.equal(result.toolCalls, 0);
-  let time = 0; requests = 0;
-  harness = configuredHarness({ now: () => time, requestJson: async () => { requests++; time = 240001; return reply([call('late')]); } });
-  result = await harness.run(user()); assert.equal(result.status, 'limited'); assert.equal(requests, 1); assert.equal(result.toolCalls, 0);
+  const harness = configuredHarness({ requestJson: async () => { requests++; return requests <= 20 ? reply([call('loop-' + requests)]) : reply(); } });
+  const result = await harness.run(user());
+  assert.equal(result.status, 'completed'); assert.equal(requests, 21); assert.equal(result.toolCalls, 20);
+  let batches = 0;
+  const large = configuredHarness({ requestJson: async () => { batches++; return batches === 1 ? reply(Array.from({ length: 12 }, (_, i) => call('big-' + i))) : reply(); } });
+  const big = await large.run(user());
+  assert.equal(big.status, 'completed'); assert.equal(big.toolCalls, 12); assert.equal(batches, 2);
 });
 
 test('timeout settles a hanging model exactly once and invokes transport cancellation', async t => {
@@ -322,17 +318,17 @@ test('exec defaults off and blocking adapters cannot execute even with user togg
   }
 });
 
-test('settings optional key persistence clears old key readback; queue survives failure', async () => {
+test('entered API keys are always persisted; queue survives failure', async () => {
   const store = memory(); let failOnce = false; const order = [];
   const harness = configuredHarness({ ...store, setJson: async (key, value) => { order.push(value.data.model); if (failOnce) { failOnce = false; throw new Error('SENSITIVE'); } return store.setJson(key, value); } });
   await harness.saveSettings({ apiKey: 'SENSITIVE' });
-  assert.equal(store.values.get('pa.settings').data.apiKey, undefined);
+  assert.equal(store.values.get('pa.settings').data.apiKey, 'SENSITIVE');
   assert.equal((await harness.loadSettings()).apiKey, 'SENSITIVE');
-  assert.equal((await configuredHarness(store).loadSettings()).apiKey, '');
-  await harness.saveSettings({ apiKey: 'SENSITIVE', persistApiKey: true });
   assert.equal((await configuredHarness(store).loadSettings()).apiKey, 'SENSITIVE');
-  await harness.saveSettings({ apiKey: '', persistApiKey: false });
-  assert.equal(store.values.get('pa.settings').data.apiKey, undefined);
+  await harness.saveSettings({ apiKey: 'SENSITIVE', persistApiKey: false });
+  assert.equal((await configuredHarness(store).loadSettings()).apiKey, 'SENSITIVE');
+  await harness.saveSettings({ apiKey: '' });
+  assert.equal(store.values.get('pa.settings').data.apiKey, '');
   failOnce = true;
   await assert.rejects(harness.saveSettings({ model: 'first' }), code('STORAGE_ERROR'));
   assert.equal(harness.storageState.dirty, true);
@@ -567,20 +563,13 @@ test('partial tool group never enters sendable history; cancellation preserves c
   assert.equal(requests, 1); assert.equal(writes, 0);
 });
 
-test('over-remaining tool batches fail before execution, and error results consume the 24-call budget', async () => {
+test('large tool batches execute before a final answer without the old 8/24 quotas', async () => {
   let requests = 0; let executed = 0; const registry = createToolRegistry();
   registry.find(tool => tool.name === 'clock').execute = async () => { executed++; return 'ok'; };
-  const runner = createRunner({ requestJson: async () => {
-    requests++; const count = requests <= 3 ? 7 : 4;
-    return reply(Array.from({ length: count }, (_, i) => call('rem-' + requests + '-' + i)));
-  } }, registry, null);
+  const runner = createRunner({ requestJson: async () => { requests++; return requests === 1 ? reply(Array.from({ length: 10 }, (_, i) => call('bulk-' + i))) : reply(); } }, registry, null);
   const result = await runner.run(user(), configured());
-  assert.equal(result.status, 'limited'); assert.equal(result.toolCalls, 21); assert.equal(executed, 21); assert.equal(requests, 4);
+  assert.equal(result.status, 'completed'); assert.equal(result.toolCalls, 10); assert.equal(executed, 10); assert.equal(requests, 2);
   validateHistory(result.messages); assert.equal(result.pending, null);
-  requests = 0;
-  const harness = configuredHarness({ requestJson: async () => reply(Array.from({ length: 8 }, (_, i) => call('err-' + requests + '-' + i, 'unknown-' + (++requests)))) });
-  const limited = await harness.run(user());
-  assert.equal(limited.status, 'limited'); assert.equal(limited.toolCalls, 24); assert.equal(limited.modelRequests, 3);
 });
 
 test('aggregate and per-session limits refuse excess bytes before any chunk write', async () => {
@@ -671,21 +660,21 @@ test('strict bounded tool audit rejects duplicate IDs, unknown statuses, argumen
     const session = harness.createSession(); session.toolAudit = audit;
     assert.throws(() => harness.saveSession(session), code('STORAGE_ERROR'));
   }
-  const session = harness.createSession(); session.toolAudit = Array.from({ length: 257 }, (_, i) => ({ ...valid, id: 'audit-' + i }));
+  const session = harness.createSession(); session.toolAudit = Array.from({ length: 8193 }, (_, i) => ({ ...valid, id: 'audit-' + i }));
   assert.throws(() => harness.saveSession(session), code('LIMIT_REACHED'));
   for (const status of ['reserved', 'started', 'completed', 'error', 'cancelled']) {
     session.toolAudit = [{ ...valid, status }]; await harness.saveSession(session); assert.deepEqual((await harness.loadSessions())[0].toolAudit, session.toolAudit);
   }
 });
 
-test('ledger seed validates before transport, snapshots IDs, and refuses whole batches beyond 256 without evicting IDs', async () => {
+test('ledger seed validates before transport, snapshots IDs, and refuses whole batches beyond 8192 without evicting IDs', async () => {
   let requests = 0; let saves = 0;
   const harness = configuredHarness({ requestJson: async () => { requests++; return reply([call('new-id')]); } });
-  for (const usedToolIds of [null, {}, ['bad/id'], ['x', 'x'], Array.from({ length: 257 }, (_, i) => 'i-' + i)]) {
+  for (const usedToolIds of [null, {}, ['bad/id'], ['x', 'x'], Array.from({ length: 8193 }, (_, i) => 'i-' + i)]) {
     const result = await harness.run(user(), {}, { usedToolIds }); assert.equal(result.status === 'error' || result.status === 'limited', true);
   }
   assert.equal(requests, 0);
-  const seed = Array.from({ length: 256 }, (_, i) => 'i-' + i);
+  const seed = Array.from({ length: 8192 }, (_, i) => 'i-' + i);
   const result = await harness.run(user(), {}, { usedToolIds: seed, beforeToolBatch: async () => { saves++; } });
   assert.equal(result.status, 'limited'); assert.equal(result.toolCalls, 0); assert.equal(saves, 0); assert.deepEqual(result.usedToolIds, seed);
   const empty = []; const running = harness.run(user(), {}, { usedToolIds: empty }); empty.push('new-id');

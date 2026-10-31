@@ -42,7 +42,7 @@ test('real local HTTP model/tool/model roundtrip and settings/session restore', 
     await harness.saveSession({ ...session, messages: result.messages });
     const restored = createHarness(adapters);
     assert.equal((await restored.loadSessions())[0].messages.length, 5);
-    assert.equal((await restored.loadSettings()).apiKey, '');
+    assert.equal((await restored.loadSettings()).apiKey, 'test-synthetic-key');
     const logs = JSON.stringify(records);
     for (const sentinel of ['test-synthetic-key', 'synthetic-tools', 'expression', '工具循环完成']) assert.ok(!logs.includes(sentinel));
   } finally { await new Promise(resolve => server.close(resolve)); }

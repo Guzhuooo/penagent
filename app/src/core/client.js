@@ -5,19 +5,36 @@ import { validateToolBatch, trimContext } from './context.js';
 import { isObject } from './schema.js';
 import { utf8Bytes, jsonBytes } from './utf8.js';
 import { anthropicEndpoint, anthropicHeaders, buildAnthropicRequest, validateAnthropicResponse } from './anthropic.js';
+// Reasoning is display-only; never send provider-internal fields back in a wire request.
+function wireMessages(messages) {
+  return messages.map(function (message) {
+    const wire = { role: message.role, content: message.content };
+    if (message.tool_calls) wire.tool_calls = message.tool_calls;
+    if (message.tool_call_id) wire.tool_call_id = message.tool_call_id;
+    return wire;
+  });
+}
 export function validateResponse(data) {
   if (!isObject(data) || !Array.isArray(data.choices) || data.choices.length !== 1) fail('PROTOCOL_ERROR');
   const choice = data.choices[0];
   if (!isObject(choice) || !isObject(choice.message) || choice.message.role !== 'assistant') fail('PROTOCOL_ERROR');
   const message = choice.message;
   if (message.refusal != null || message.function_call != null || message.audio != null) fail('PROTOCOL_ERROR');
+  let reasoning = '';
+  if (typeof message.reasoning_content === 'string') reasoning = message.reasoning_content;
+  else if (typeof message.reasoning === 'string') reasoning = message.reasoning;
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(reasoning)) fail('PROTOCOL_ERROR');
   if (message.tool_calls != null) {
     if (choice.finish_reason !== 'tool_calls' || (message.content !== null && typeof message.content !== 'string')) fail('PROTOCOL_ERROR');
-    return { role: 'assistant', content: message.content, tool_calls: validateToolBatch(message.tool_calls) };
+    const result = { role: 'assistant', content: message.content, tool_calls: validateToolBatch(message.tool_calls) };
+    if (reasoning) result.reasoning = reasoning;
+    return result;
   }
   if (choice.finish_reason === 'length') fail('LIMIT_REACHED');
   if (choice.finish_reason !== 'stop' || typeof message.content !== 'string') fail('PROTOCOL_ERROR');
-  return { role: 'assistant', content: message.content };
+  const result = { role: 'assistant', content: message.content };
+  if (reasoning) result.reasoning = reasoning;
+  return result;
 }
 // A registry is either a plain array (legacy/tests) or a function returning a
 // snapshot. The function form lets the harness expose custom tools that were
@@ -45,12 +62,16 @@ export function createOpenAIClient(requestJson, registry) {
         const schemas = enabledTools.map(function (tool) {
           return { name: tool.name, description: tool.description, parameters: tool.parameters };
         });
-        body = buildAnthropicRequest(trimContext(messages), settings, schemas);
+        const context = trimContext(messages);
+        if (settings.systemPrompt) context.unshift({ role: 'system', content: settings.systemPrompt });
+        body = buildAnthropicRequest(context, settings, schemas);
         headers = anthropicHeaders(settings.apiKey);
         endpoint = anthropicEndpoint(settings);
       } else {
+        const context = trimContext(messages);
+        if (settings.systemPrompt) context.unshift({ role: 'system', content: settings.systemPrompt });
         body = {
-          model: settings.model, messages: trimContext(messages), temperature: settings.temperature,
+          model: settings.model, messages: wireMessages(context), temperature: settings.temperature,
           max_tokens: settings.maxTokens, stream: false
         };
         const schemas = enabledTools.map(function (tool) {

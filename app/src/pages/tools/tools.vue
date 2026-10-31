@@ -23,6 +23,23 @@
           <text class="name">{{ tool.name }}</text>
           <text class="detail">{{ tool.description }}</text>
         </div>
+        <text class="heading">插件 {{ pluginCount }} 个</text>
+        <text class="state">把插件 JSON 放入工作区 plugins/ 目录，然后点“重新加载插件”；无需重装应用。</text>
+        <div class="reload" @click="reloadPlugins"><text class="reload-label">{{ reloading ? '正在重载…' : '重新加载插件' }}</text></div>
+        <div v-for="plugin in plugins" :key="plugin.id" class="row">
+          <text class="name">{{ plugin.name }} · {{ plugin.version }}</text>
+          <text class="detail">{{ plugin.id }} · {{ plugin.toolCount }} 个工具 · {{ plugin.tools.join(', ') }}</text>
+        </div>
+        <div v-for="error in pluginErrors" :key="error.source" class="row">
+          <text class="kind">{{ error.source }}</text>
+          <text class="detail">插件无效：{{ error.code }} {{ error.message }}</text>
+        </div>
+        <text class="heading">插件工具 {{ pluginTools.length }} 个</text>
+        <div v-for="tool in pluginTools" :key="tool.name" class="row">
+          <text class="name">{{ tool.name }}</text>
+          <text class="kind">来源 {{ tool.origin }}</text>
+          <text class="detail">{{ tool.description }}</text>
+        </div>
         <text class="heading">自定义工具 {{ customTools.length }} 个</text>
         <text v-if="!customTools.length" class="state">还没有自定义工具。可在对话中让模型用 define_tool 创建。</text>
         <div v-for="tool in customTools" :key="tool.name" class="row">
@@ -52,13 +69,15 @@ import { leaveTools, navigate } from '../../services/navigation.js';
 export default {
   name: 'ToolsPage',
   data() {
-    return { catalog: [], recognized: [], query: '', searched: false, status: 'loading', notice: '', pendingDelete: '' };
+    return { catalog: [], recognized: [], query: '', searched: false, status: 'loading', notice: '', pendingDelete: '', plugins: [], pluginErrors: [], reloading: false };
   },
   computed: {
     queryLine() { return this.query || '点“识别工具”输入用途，例如：单位换算 或 计算'; },
     builtinTools() { return this.catalog.filter((tool) => tool.origin === 'builtin'); },
     metaTools() { return this.catalog.filter((tool) => tool.origin === 'meta'); },
     customTools() { return this.catalog.filter((tool) => tool.origin === 'custom'); },
+    pluginTools() { return this.catalog.filter((tool) => tool.origin === 'plugin'); },
+    pluginCount() { return this.plugins.length; },
   },
   mounted() {
     this.ownerActive = true; this.destroyed = false; this.generation = 0; this.editing = null;
@@ -92,6 +111,11 @@ export default {
         const catalog = await this.application.listTools();
         if (!this.valid(generation)) return;
         this.catalog = Array.isArray(catalog) ? catalog : [];
+        if (typeof this.application.pluginCatalog === 'function') {
+          const state = this.application.pluginCatalog();
+          this.plugins = state && Array.isArray(state.plugins) ? state.plugins : [];
+          this.pluginErrors = state && Array.isArray(state.errors) ? state.errors : [];
+        }
         this.status = 'ready';
       } catch (error) {
         if (!this.valid(generation)) return;
@@ -116,6 +140,21 @@ export default {
         if (!this.valid(generation)) return;
         this.recognized = Array.isArray(matches) ? matches : [];
       } catch (error) { if (this.valid(generation)) { this.recognized = []; this.notice = errorLabel(error); } }
+    },
+    async reloadPlugins() {
+      if (this.destroyed || !this.ownerActive || this.reloading) return;
+      const generation = ++this.generation;
+      this.reloading = true;
+      try {
+        if (typeof this.application.reloadPlugins !== 'function') throw new Error('插件重载不可用');
+        const state = await this.application.reloadPlugins();
+        if (!this.valid(generation)) return;
+        this.plugins = state && Array.isArray(state.plugins) ? state.plugins : [];
+        this.pluginErrors = state && Array.isArray(state.errors) ? state.errors : [];
+        this.notice = '已重载 ' + this.plugins.length + ' 个插件';
+        await this.load();
+      } catch (error) { if (this.valid(generation)) this.notice = errorLabel(error); }
+      finally { if (this.valid(generation)) this.reloading = false; }
     },
     async removeCustom(name) {
       if (this.destroyed || !this.ownerActive || this.status === 'loading') return;
@@ -147,6 +186,8 @@ export default {
 <style lang="less" scoped>
 @import "base.less";
 .page { width: 100vw; height: 100vh; flex-direction: column; background-color: @bg-base; }
+.reload { width: 40vw; min-height: 10vh; margin-left: 5vw; margin-top: 1vh; flex-direction: row; align-items: center; justify-content: center; background-color: @bg-muted; border-radius: @radius-sm; }
+.reload-label { font-size: @font-sm; color: @accent; lines: 1; }
 .head { width: 100vw; height: 18vh; flex-direction: row; align-items: center; background-color: @bg-elevated; }
 .title { width: 40vw; margin-left: 3vw; font-size: @font-md; color: @accent; }
 .workspace { width: 26vw; height: @touch-min; margin-left: 1vw; flex-direction: row; align-items: center; justify-content: center; background-color: @brand; border-radius: @radius-sm; }

@@ -6,7 +6,7 @@
       <scroller class="messages" scroll-direction="vertical">
         <div v-if="!messages.length" class="empty"><text class="empty-title">从一个问题开始</text><text class="empty-copy">点下方输入问题。首次使用请在设置中填写服务地址、密钥和模型。</text></div>
         <div v-for="(message, index) in messages" :key="message.localId || selectedId + '-' + index" class="message-row">
-          <message-card v-if="message.role !== 'tool'" :message="message" />
+          <message-card v-if="message.role !== 'tool' && message.role !== 'system'" :message="message" />
         </div>
         <tool-card v-for="tool in visibleTools" :key="tool.id" :tool="tool" />
         <text v-if="notice" class="notice">{{ notice }}</text>
@@ -96,6 +96,10 @@ export default {
         // Preload persisted custom recipes so the next run advertises them.
         if (typeof this.application.loadCustomTools === 'function') {
           try { await this.application.loadCustomTools(); } catch (error) { if (this.valid(generation)) this.notice = errorLabel(error); }
+          if (!this.valid(generation)) return;
+        }
+        if (typeof this.application.loadPlugins === 'function') {
+          try { await this.application.loadPlugins(); } catch (error) { /* a broken plugin folder must not block chat */ }
           if (!this.valid(generation)) return;
         }
         // A dirty session is retained in memory until an explicit successful save.

@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-10-31 · 0.6.0：key 自动保存、无限额、折叠、提示词、纯文本渲染与插件热载
+
+### R13 · 交互与扩展性升级
+- **要求**：保存每次输入的 API key；不要业务限额；工具调用/思维链可折叠；注入提示词；尽量不用 Markdown（做轻量渲染）；更新必须保留 key；提供工具热加载接口与插件规范，先装本体再装插件/工具。
+- **API key**：`DEFAULT_SETTINGS.persistApiKey=true`；`saveSettings` 无条件把 key 写进 `pa.settings`，加载时恢复；设置页输入 key 确认后自动保存一次；`clearKey` 才删除。移除“记住密钥”确认流程。core 测试覆盖更新设置/关闭旧 flag 后 key 仍在。
+- **限额**：`LIMITS` 去掉旧 6/24/8/240s 业务阈值，改为实际不可达的 1e6/1e6/128/24h 安全护栏；单次请求 60s、单工具 600s、请求/响应 2 MiB、存储上限保留。旧限额测试改为“长循环不停止 + 大批量 >8 通过”。
+- **提示词**：`systemPrompt` 设置项（≤8192 字符），core 在请求组装时插入 system message，不写入会话/显示历史；插件 prompt 追加。真实 endpoint 测试用纯文本提示词注入成功。
+- **折叠**：Anthropic thinking / OpenAI reasoning_content 映射到 assistant `reasoning`；`validateHistory` 保留 reasoning 以支持会话恢复，但客户端 `wireMessages` 从不回传；message-card 增加“思考过程/工具调用”折叠，tool-card 详情默认折叠；reasoning 长度/控制字符校验。
+- **轻量 Markdown**：新增 `utils/plain-text.js`，聊天和工具结果统一转纯文本（标题/粗体/行内代码/围栏/链接/列表/表格符号），不引入 Markdown 渲染器或 HTML 执行。
+- **插件**：新增 `app/src/plugins/plugin.js`（`penagent-plugin/1` 规范校验）与 `store.js`（扫描工作区 `plugins/*.json`、热加载、坏插件隔离、prompt 汇总）；注册表合并 plugin 工具（origin=plugin），工具页显示插件/错误并增加“重新加载插件”；`docs/PLUGINS.md` 完整规范；core 增加 loadPlugins/reloadPlugins/pluginCatalog。插件仅支持声明式 recipe，不允许代码/原生库。
+- **测试**：新增 `plugins.test.mjs`（plain text、规范、store 热重载/坏文件、harness 插件工具+提示词注入、reasoning 保留）；全套 **141/141 + legacy 5/5**，Python 22/22。
+- **真机**：0.6.0 debug 安装 ret:0；真实 Anthropic endpoint probe 完成 clock 工具（completed, toolCalls 1, 5598ms）；工作区插件 `weekday_cn` 在工具页出现。截图 `app/artifacts/0.6.0/`。
+- **未完成**：折叠 UI 真机视觉（手工 seed 会话未加载）、插件 reload 按钮真机点击截图；真实 endpoint 仍单账户/单模型；流式、Falcon 线程/取消、IME/内存/多分辨率未验。
+- **产物**：debug **646182 B / SHA a9990ca0…eadfd**，production **633053 B / SHA 817a4956…9f000**，含 native `.so` `970b6a33…`；证据 `docs/evidence/native-device-0.6.0.txt`。
+
+---
+
 ## 2026-10-31 · 0.5.0：真实 Anthropic endpoint 可用版本
 
 ### R12 · Anthropic Messages 支持与真实 endpoint 工具闭环

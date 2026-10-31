@@ -41,7 +41,7 @@ function profileInfo(profile) {
   });
   return info;
 }
-export function createToolRegistry(customRecords) {
+export function createToolRegistry(customRecords, pluginTools) {
   const registry = [
     { name: 'clock', origin: 'builtin', description: 'Current UTC time and local timezone offset.', parameters: object({}), async execute(args, ctx) {
       ctx.check();
@@ -151,6 +151,7 @@ export function createToolRegistry(customRecords) {
   createWorkspaceTools().forEach(function (tool) { registry.push(tool); });
   const records = Array.isArray(customRecords) ? customRecords : [];
   records.forEach(function (record) { registry.push(buildCustomTool(record)); });
+  if (Array.isArray(pluginTools)) pluginTools.forEach(function (tool) { if (tool && typeof tool.name === 'string') registry.push(tool); });
   return registry;
 }
 export function validateToolArguments(tool, args, settings) {

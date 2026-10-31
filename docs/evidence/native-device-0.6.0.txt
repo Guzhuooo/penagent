@@ -1,0 +1,36 @@
+0.6.0 功能与真机验证 — 2026-10-31
+Profile: Y02-3562 / 4.9.7 / appid 8002026100700001 / ADB <device-serial>
+
+PACKAGE (0.6.0 debug/production)
+- debug:  646182 B  sha256 a9990ca0a70f853c232eabeed60d9200bae7f322bdfcd91bf57cc1de81ceadfd
+- prod:   633053 B  sha256 817a495699f2b71a6725c67e4a659d40532e6b5ab663cb8d0da3cb3514f000
+- native libs/libjsapi_httpx.so 488,520 B sha256 970b6a33…10b4a6 (unchanged from 0.4/0.5)
+- verify-amr.py --native-sha256 passed for both; 11 resources, one native library.
+
+FEATURES VERIFIED ON HOST (141/141 + legacy 5/5, Python 22/22)
+- API key auto-persist: saving any settings (or entering a key) stores the key; clearing is the
+  explicit erase. No opt-in flag can drop it.
+- No business quotas: model-request/tool/batch/time limits are effectively unreachable safety
+  guards (1e6 / 1e6 / 128 / 24h), not the old 6 / 24 / 8 / 240s caps. Single-request timeout 60s
+  and response/body/storage byte bounds remain for device safety.
+- System prompt injection: `systemPrompt` setting is sent as a system message on each request;
+  plugin prompts are appended. It is not persisted into display history.
+- Thinking/tool folding: Anthropic thinking and OpenAI reasoning_content are kept on the assistant
+  message for display only; message-card has collapsible “思考过程/工具调用”, tool-card has
+  collapsible details. Reasoning is never sent back to the provider.
+- Lightweight Markdown → plain text formatter (headings/bold/code/links/lists/fences) is applied
+  to displayed messages and tool results.
+- Plugin spec penagent-plugin/1: JSON bundles in workspace `plugins/`, declarative recipes only;
+  Tools page “重新加载插件” hot load, no AMR reinstall; see docs/PLUGINS.md.
+
+DEVICE EVIDENCE
+- 0.6.0 debug installed ret 0; probe “真实对话” with real Anthropic endpoint:
+  status completed, toolCalls 1, elapsed 5598 ms, answer “当前 UTC 时间是 2026 年 10 月 31 日 09:13:08。”
+  Screenshot: app/artifacts/0.6.0/probe-real-chat.png.
+- Plugin hot load: workspace/plugins/weekday.json created; after Tools page load it appears as
+  plugin tool “weekday_cn” with origin plugin (screenshot app/artifacts/0.6.0/tools-plugins.png).
+  Unit tests cover reload/error isolation.
+- Settings/workspace reset to blank after testing; real key/temp files removed.
+- Note: a manually seeded chat session for visual fold testing did not load in the device UI; this
+  is not counted as collapsible-UI device evidence. Host component/unit tests cover reasoning
+  preservation and the fold markup; on-device visual fold still needs a real chat scroll test.

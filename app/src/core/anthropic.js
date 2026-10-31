@@ -105,6 +105,7 @@ export function validateAnthropicResponse(data) {
     !Array.isArray(data.content) || typeof data.stop_reason !== 'string') fail('PROTOCOL_ERROR');
   const texts = [];
   const calls = [];
+  const reasoning = [];
   data.content.forEach(function (block) {
     if (!isObject(block) || typeof block.type !== 'string') fail('PROTOCOL_ERROR');
     if (block.type === 'text') {
@@ -118,16 +119,24 @@ export function validateAnthropicResponse(data) {
       calls.push({ id: block.id, type: 'function', function: { name: block.name, arguments: JSON.stringify(block.input) } });
       return;
     }
-    // Provider may emit extended thinking/redacted thinking blocks; they are not
-    // part of the conversation protocol and are intentionally dropped.
-    if (block.type === 'thinking' || block.type === 'redacted_thinking') return;
+    // Provider may emit extended thinking/redacted thinking blocks. Keep visible
+    // thinking text for the collapsible UI; it is never replayed to the model.
+    if (block.type === 'thinking') {
+      if (typeof block.thinking === 'string' && block.thinking) reasoning.push(block.thinking);
+      return;
+    }
+    if (block.type === 'redacted_thinking') return;
     fail('PROTOCOL_ERROR');
   });
   if (data.stop_reason === 'max_tokens') fail('LIMIT_REACHED');
   if (calls.length) {
-    return { role: 'assistant', content: texts.length ? texts.join('\n') : null, tool_calls: validateToolBatch(calls) };
+    const message = { role: 'assistant', content: texts.length ? texts.join('\n') : null, tool_calls: validateToolBatch(calls) };
+    if (reasoning.length) message.reasoning = reasoning.join('\n\n');
+    return message;
   }
   if (data.stop_reason !== 'end_turn' && data.stop_reason !== 'stop_sequence') fail('PROTOCOL_ERROR');
   if (!texts.length) fail('PROTOCOL_ERROR');
-  return { role: 'assistant', content: texts.join('\n') };
+  const message = { role: 'assistant', content: texts.join('\n') };
+  if (reasoning.length) message.reasoning = reasoning.join('\n\n');
+  return message;
 }

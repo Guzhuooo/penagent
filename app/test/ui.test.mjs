@@ -61,15 +61,17 @@ test('only confirmed IME edits change draft; dirty sessions cannot be switched a
   await chat.selectSession('s2'); assert.equal(chat.selectedId, 's1');
 });
 
-test('settings requires plaintext consent and clear-key save removes persisted permission', async () => {
+test('settings always persists entered keys and clear-key removes them', async () => {
   let saved;
   const { instance: settings } = mount('settings', { application: { saveSettings: async data => { saved = data; } } });
   await settings.load();
   settings.form.apiKey = 'PRIVATE-SENTINEL';
-  settings.togglePersist(); assert.equal(settings.form.persistApiKey, false); assert.equal(settings.confirmPersistence, true);
-  await settings.save(); assert.equal(saved, undefined);
-  settings.confirmRemember(); await settings.save(); assert.equal(saved.persistApiKey, true);
-  await settings.clearKey(); assert.equal(saved.apiKey, ''); assert.equal(saved.persistApiKey, false);
+  await settings.save();
+  assert.equal(saved.apiKey, 'PRIVATE-SENTINEL');
+  assert.equal(saved.persistApiKey, true);
+  await settings.clearKey();
+  assert.equal(saved.apiKey, '');
+  assert.equal(saved.persistApiKey, true);
 });
 
 test('tools page lists built-in, meta and custom tools and deletes only after a second tap', async () => {

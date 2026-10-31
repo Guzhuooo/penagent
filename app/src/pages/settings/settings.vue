@@ -16,12 +16,8 @@
       <setting-field label="模型" :value="form.model" placeholder="填写模型名称" @edit="edit('model')" />
       <div class="choice" @click="toggleFormat"><text class="choice-label">接口格式</text><text class="toggle-state">{{ formatLabel }}</text></div>
       <text v-if="form.apiFormat === 'anthropic'" class="warning">Anthropic Messages：地址填根地址或 /v1，请求发往 /v1/messages；密钥以 x-api-key 发送。</text>
-      <div class="choice" @click="togglePersist"><image class="toggle-icon" :src="persistIcon" mode="aspectFit"></image><text class="choice-label">记住密钥（默认仅保留在内存）</text><text class="toggle-state">{{ form.persistApiKey ? '已开启' : '已关闭' }}</text></div>
-      <div v-if="confirmPersistence" class="confirmation">
-        <text class="warning">设备本地以明文保存，能够读取设备数据的人可获取密钥。</text>
-        <div class="choice" @click="confirmRemember"><text class="choice-label">我已了解，记住密钥</text></div>
-        <div class="choice" @click="confirmPersistence = false"><text class="choice-label">取消</text></div>
-      </div>
+      <setting-field label="系统提示词" :value="promptPreview" placeholder="注入每轮请求的系统提示词" @edit="edit('systemPrompt')" />
+      <text class="warning">密钥每次输入后自动保存在本机（明文）。更新设置时也会保留已保存的密钥；清除密钥按钮才会删除。</text>
       <div class="choice" @click="clearKey"><text class="choice-label">清除密钥并保存</text></div>
       <text class="heading">工具权限</text>
       <text class="warning">文件工具只能访问应用私有工作区；工作区路径由运行时推导，不能访问系统其他目录。执行命令默认关闭。</text>
@@ -52,16 +48,18 @@ const TOOL_OPTIONS = [
 ];
 function blankForm() {
   return { baseUrl: '', apiKey: '', model: '', temperature: 0.7, maxTokens: 1024, apiFormat: 'openai',
-    persistApiKey: false, execShellEnabled: false, developmentMode: false,
+    systemPrompt: '',
+    persistApiKey: true, execShellEnabled: false, developmentMode: false,
     tools: { clock: true, calculator: true, note: true, device_info: true, net_probe: true, execShell: false,
       file_list: true, file_read: true, file_write: true, file_delete: true, file_exec: false }, allowedProbeHosts: [] };
 }
 export default {
   name: 'SettingsPage', components: { SettingField },
-  data() { return { form: blankForm(), toolOptions: TOOL_OPTIONS, notice: '', saving: false, loading: false, loaded: false, confirmPersistence: false }; },
+  data() { return { form: blankForm(), toolOptions: TOOL_OPTIONS, notice: '', saving: false, loading: false, loaded: false }; },
   computed: {
     // Inline PNG data URIs (assets/icons.js); device fonts cannot render glyph toggles.
-    persistIcon() { return icon(this.form.persistApiKey ? 'check-on' : 'check-off'); },
+    execIcon() { return icon(this.form.execShellEnabled ? 'check-on' : 'check-off'); },
+    promptPreview() { return this.form.systemPrompt ? this.form.systemPrompt.slice(0, 40) : ''; },
     execIcon() { return icon(this.form.execShellEnabled ? 'check-on' : 'check-off'); },
     formatLabel() { return this.form.apiFormat === 'anthropic' ? 'Anthropic' : 'OpenAI'; },
     toolIcons() {
@@ -88,6 +86,11 @@ export default {
           if (editing.field === 'allowedProbeHosts') this.form.allowedProbeHosts = value ? value.split(',').map((host) => host.trim().toLowerCase()).filter(Boolean) : [];
           else this.form[editing.field] = value;
           this.notice = '修改尚未保存';
+          if (editing.field === 'apiKey' && value) {
+            this.form.apiKey = value;
+            this.notice = '正在保存密钥…';
+            Promise.resolve().then(() => this.save());
+          }
         };
         input.attach(this.inputHandler);
       } catch (error) { this.notice = errorLabel(error); }
@@ -113,27 +116,21 @@ export default {
       const generation = this.generation;
       this.editing = { field, generation };
       const value = field === 'allowedProbeHosts' ? this.form.allowedProbeHosts.join(', ') : this.form[field];
-      try { await input.open({ text: value, placeholder: field === 'apiKey' ? '输入密钥（系统界面可能显示明文）' : '输入配置', maxlength: field === 'model' ? 128 : 2048, enterButtonText: '确定' }); }
+      const maxlength = field === 'model' ? 128 : field === 'apiKey' ? 4096 : field === 'systemPrompt' ? 8192 : 2048;
+      try { await input.open({ text: value, placeholder: field === 'apiKey' ? '输入密钥（系统界面可能显示明文）' : field === 'systemPrompt' ? '输入系统提示词' : '输入配置', maxlength, enterButtonText: '确定' }); }
       catch (error) { if (this.valid(generation)) { this.editing = null; this.notice = errorLabel(error); } }
     },
     toggleFormat() { if (!this.canEdit()) return; this.form.apiFormat = this.form.apiFormat === 'anthropic' ? 'openai' : 'anthropic'; this.notice = '修改尚未保存'; },
-    togglePersist() {
-      if (!this.canEdit()) return;
-      if (this.form.persistApiKey) { this.form.persistApiKey = false; this.confirmPersistence = false; this.notice = '保存后清除旧持久化密钥'; }
-      else if (this.form.developmentMode) this.notice = '开发测试密钥不持久化';
-      else this.confirmPersistence = true;
-    },
-    confirmRemember() { if (!this.canEdit()) return; this.form.persistApiKey = true; this.confirmPersistence = false; this.notice = '修改尚未保存'; },
     toggleTool(id) { if (!this.canEdit()) return; this.form.tools[id] = !this.form.tools[id]; this.notice = '修改尚未保存'; },
     toggleExec() { if (!this.canEdit()) return; this.form.execShellEnabled = !this.form.execShellEnabled; this.form.tools.execShell = this.form.execShellEnabled; this.notice = '修改尚未保存；设备执行能力仍不可用'; },
-    useMock() { if (!this.canEdit()) return; this.form = developerMockSettings(this.form); this.confirmPersistence = false; this.notice = '已选择开发 mock，请保存；原密钥已替换为测试密钥'; },
-    useProduction() { if (!this.canEdit()) return; this.form = blankForm(); this.confirmPersistence = false; this.notice = '请填写 HTTPS 服务地址和模型后保存'; },
-    async clearKey() { if (!this.canEdit()) return; this.form.apiKey = ''; this.form.persistApiKey = false; this.confirmPersistence = false; await this.save(); },
+    useMock() { if (!this.canEdit()) return; this.form = developerMockSettings(this.form); this.notice = '已选择开发 mock，请保存；原密钥已替换为测试密钥'; },
+    useProduction() { if (!this.canEdit()) return; this.form = blankForm(); this.notice = '请填写 HTTPS 服务地址和模型后保存'; },
+    async clearKey() { if (!this.canEdit()) return; this.form.apiKey = ''; await this.save(); },
     async save() {
-      if (!this.canEdit() || this.confirmPersistence) return;
+      if (!this.canEdit()) return;
       const generation = this.generation;
       this.saving = true;
-      const settings = Object.assign({}, this.form, { tools: Object.assign({}, this.form.tools), allowedProbeHosts: this.form.allowedProbeHosts.slice() });
+      const settings = Object.assign({}, this.form, { persistApiKey: true, tools: Object.assign({}, this.form.tools), allowedProbeHosts: this.form.allowedProbeHosts.slice() });
       try { await this.application.saveSettings(settings); if (!this.valid(generation)) return; this.notice = '设置已保存'; }
       catch (error) { if (this.valid(generation)) this.notice = errorLabel(error); }
       finally { if (!this.destroyed) this.saving = false; }

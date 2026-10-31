@@ -28,7 +28,12 @@ export function validateHistory(messages) {
     if (m.role === 'assistant' && m.tool_calls != null) {
       if (m.content !== null && typeof m.content !== 'string') fail('PROTOCOL_ERROR');
       const calls = validateToolBatch(m.tool_calls, seen);
-      const group = [{ role: 'assistant', content: m.content, tool_calls: calls }];
+      const assistant = { role: 'assistant', content: m.content, tool_calls: calls };
+      if (m.reasoning != null) {
+        if (typeof m.reasoning !== 'string' || m.reasoning.length > 32768 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(m.reasoning)) fail('PROTOCOL_ERROR');
+        assistant.reasoning = m.reasoning;
+      }
+      const group = [assistant];
       calls.forEach(function (call) { seen[call.id] = true; });
       calls.forEach(function (call) {
         i += 1;
@@ -39,7 +44,12 @@ export function validateHistory(messages) {
       groups.push(group);
     } else {
       if (typeof m.content !== 'string') fail('PROTOCOL_ERROR');
-      groups.push([{ role: m.role, content: m.content }]);
+      const message = { role: m.role, content: m.content };
+      if (m.reasoning != null) {
+        if (typeof m.reasoning !== 'string' || m.reasoning.length > 32768 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(m.reasoning)) fail('PROTOCOL_ERROR');
+        message.reasoning = m.reasoning;
+      }
+      groups.push([message]);
     }
   }
   return { groups: groups, seen: seen };

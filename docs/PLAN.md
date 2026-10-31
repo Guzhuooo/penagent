@@ -179,6 +179,19 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 - 边界：仅一个真实账户/模型/endpoint；其它兼容服务、流式、Falcon 线程/取消、限流/长对话、
   IME/内存/多分辨率与正式发布链路仍未验证；测试 key 已从设备清除。
 
+### 2.10 0.6.0 持久 key、无限额、折叠、提示词与插件热载
+
+- key 自动保存：输入即保存，更新设置不丢；只有显式清除。
+- 旧业务循环限额移除（模型/工具/批量/总时长），保留单次请求/工具/字节安全边界。
+- 系统提示词设置注入请求；Anthropic thinking / OpenAI reasoning 作为可折叠“思考过程”，
+  工具调用/工具结果可折叠，reasoning 仅显示不回传。
+- 轻量 Markdown → 纯文本显示（`utils/plain-text.js`）。
+- 插件规范 `penagent-plugin/1`：工作区 `plugins/*.json`，声明式 recipe 工具 + prompt，
+  工具页热重载；不允许代码/原生库。
+- 真机：0.6.0 真实 endpoint clock 闭环 completed/toolCalls 1/5598ms；插件 `weekday_cn` 在
+  工具页出现。折叠 UI 真机视觉与插件 reload 点击仍未截图验证。
+- 包：debug 646182 B / SHA `a9990ca0…eadfd`，production 633053 B / SHA `817a4956…9f000`。
+
 ## 3. 里程碑与出口
 
 | 里程碑 | 内容 | 出口判据与当前状态 |
@@ -193,6 +206,7 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | M7 组件高度门禁 + native 2018 工具链/真机 sysroot（0.3.1 新增） | 154 条尺寸声明审计与严格 source-contract 门禁；0.3.1 AMR；真机采集 sysroot bundle；ubuntu:18.04 GCC 7.5.0 AArch64 交叉工具链；Actions 构建 + ELF/ABI 审计 | 0.3.1 宿主 126/126 + 5/5 + Python 22/22；两包构建/校验/真机安装；native run 41179283105/41179509958 绿，`.so` 488,520 B / SHA 22d4e811…，静态审计通过；未打进 AMR/未真机加载，发布链路仍需获批 vendor bundle |
 | M8 可用版本：native transport 进 AMR + 真机验证（0.4.0 新增） | `.so` 打进 AMR；native requestJson（TLS/真实 status/禁 redirect/timeout/cancelAll）；verify-amr native SHA；probe 原生 HTTPS/TLS 拒绝；native + file_* 工具闭环 | 0.4.0 宿主 131/131 + 5/5 + Python 22/22；两包 638697/626825 B 且含 `970b6a33…`；Y02 原生 HTTPS POST 200、过期证书 TLS_ERROR、AI 文件闭环 completed；真实 endpoint/真实 key 仍未验证，native-manual 仍 disabled |
 | M9 Anthropic Messages + 真实 endpoint 闭环（0.5.0 新增） | `apiFormat=anthropic`；/v1/messages、x-api-key、tool_use/tool_result 转换、thinking 丢弃；60s 超时/240s run；设置页切换；真实 endpoint 测试 | 0.5.0 宿主 136/136 + 5/5 + Python 22/22；Y02 真实 `api.yunqing.asia` + deepseek-v4.1-flash 完成 clock 工具闭环（工具 1、10647ms）；包 641126/628708 B；其它 provider/流式/Falcon 线程等仍未验证 |
+| M10 持久 key、无限额、折叠、提示词、纯文本与插件（0.6.0 新增） | key 自动保存；业务循环限额取消；systemPrompt；reasoning/tool 折叠；Markdown→纯文本；插件规范 + 工作区热载 + 工具页重载 | 0.6.0 宿主 141/141 + 5/5 + Python 22/22；真机真实 endpoint clock 闭环 completed/1 call/5598ms；插件工具 weekday_cn 出现；折叠 UI 真机视觉与插件 reload 点击未验 |
 | M5 验收交付 | STANDARDS §13 完整矩阵、版本递增、AMR / 可选 `.so` SHA、逐步日志与限制说明 | 声明支持的功能/profile 对应证据齐全；未测能力明确标注，不把 mock 当真机。GitHub 发布仅在具体仓库授权内执行 |
 
 M1 的纯展示 / mock 与 M0 待办可并行；M2 生产真机 LLM 依赖 M0.5 安全通道完整通过，flat JSON POST 即使送达也不解锁。M3 纯逻辑可先用 mock，真机闭环依赖 M2。M4 依赖 M1 存储边界和 M3 参数 / 权限；M5 不能跳过 R06→R07 修复的 R08 最终集成回归及任何未关闭门槛。
