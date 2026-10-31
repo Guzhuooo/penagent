@@ -1,0 +1,14 @@
+cmake: cmake version 3.31.6
+ninja: 1.13.2
+host g++: g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+host g++ triple: x86_64-linux-gnu
+aarch64 g++: aarch64-linux-gnu-g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+aarch64 g++ triple: aarch64-linux-gnu
+python3: Python 3.12.3
+curl-config: libcurl 8.5.0
+pkg-config libcurl: 8.5.0
+host curl header: /usr/include/x86_64-linux-gnu/curl/curl.h
+cmake 3.28.3-1build7
+g++-aarch64-linux-gnu 4:13.2.0-7ubuntu1
+libc6-dev-arm64-cross 2.39-0ubuntu8cross1
+libcurl4-openssl-dev 8.5.0-2ubuntu10.16

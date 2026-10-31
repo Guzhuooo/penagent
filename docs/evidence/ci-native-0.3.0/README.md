@@ -23,11 +23,13 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
 | [40168576908](https://github.com/Guzhuooo/penagent/actions/runs/40168576908) | push | `e6f0832` | 93/93 通过 | 22/22 通过 | 1/1 通过（1.63s） | 2 个目标文件 ELF64/AArch64 | 绿 |
 | [40168752041](https://github.com/Guzhuooo/penagent/actions/runs/40168752041) | push | `f4a020e` | 93/93 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.63s） | 2 个目标文件 ELF64/AArch64，SHA-256 与上次一致 | 绿 |
 | [40169416478](https://github.com/Guzhuooo/penagent/actions/runs/40169416478) | push | `824ffaf` | 93/93 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.64s） | 2 个目标文件 ELF64/AArch64，SHA-256 与前两次一致 | 绿 |
+| [41175666914](https://github.com/Guzhuooo/penagent/actions/runs/41175666914) | workflow_dispatch | `bc01903` | **124/124** 通过（最终 0.3.0 源码） | 22/22 通过 | 1/1 通过（1.64s） | 2 个目标文件 ELF64/AArch64 | 绿 |
 
 明细见各 `run-<id>.md` 与对应 `run-<id>/` 目录。
 
-仓库最后一次被本 workflow 完整验证的 commit 是 `824ffaf`（run 40169416478）；其后
-只向本目录追加文档/证据，未改动 `native/`、`tools/` 或 workflow，因此没有新的运行。
+仓库最后一次被本 workflow 完整验证的 commit 是 `bc01903`（run 41175666914，最终 0.3.0
+源码：emoji 替换、自造工具、工作区 file_* 工具）。同一 commit 的 push 触发 run
+`41175661246` 因并发策略被手动 run 取消（cancelled，非失败）。
 
 ## 复现 / 重跑
 

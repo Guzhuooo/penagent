@@ -60,8 +60,10 @@ header/key；它**不是**生产 adapter，不能解锁真实 endpoint。真机 
 
 ## GitHub Actions / native
 
-仓库 `Guzhuooo/penagent`（private）的 `.github/workflows/native-compile.yml` 已有三次绿色 run：
-`40168576908`、`40168752041`、`40169416478`（commit `824ffaf`）。每次均包含：
+仓库 `Guzhuooo/penagent`（private）的 `.github/workflows/native-compile.yml` 最近一次 run
+（`41175666914`，commit `bc01903`，最终 0.3.0 源码）全绿：JS **124/124**、Python 策略 22/22、
+宿主 CTest **1/1 Passed**、AArch64 compile-only ELF64/AArch64。更早三次 run
+`40168576908`、`40168752041`、`40169416478`（commit `824ffaf`）同样为绿。
 
 - Node 测试（当时 93/93，后续 0.3.0 源码本地 124/124）；Python 策略 22/22；
 - 宿主 CMake `HTTPX_BUILD_PLUGIN=OFF / HTTPX_BUILD_TESTS=ON` + CTest `1/1 Passed`；
@@ -74,12 +76,11 @@ header/key；它**不是**生产 adapter，不能解锁真实 endpoint。真机 
 
 ## 仍未完成 / 阻塞
 
-- **最终 0.3.0 源码（本地 commit `c2392c0`）未能推送到 GitHub 私有仓库，最终 CI run 未触发。**
-  本机 `C:\Windows\System32\drivers\etc\hosts` 把 `github.com` / `api.github.com` 等解析到
-  `127.0.0.1`，443 无本地监听，`git push` 与 `gh api` 均连接失败；未修改 hosts/网络配置，也未把
-  本地测试冒充 CI。此前的 CI 绿色证据绑定 commit `824ffaf`（见上）。网络恢复后执行
-  `git push origin main`、`gh workflow run native-compile.yml --repo Guzhuooo/penagent --ref main`
-  并下载/记录新 run。
+- **最终 0.3.0 源码已推送并完成 CI**：commit `bc01903`（源码等同 `c2392c0`）的
+  `native-compile.yml` 手动 run [41175666914](https://github.com/Guzhuooo/penagent/actions/runs/41175666914)
+  两 job 全绿：JS **124/124**、策略 **22/22**、宿主 CTest **1/1**、AArch64 compile-only
+  ELF64/AArch64。证据在 `docs/evidence/ci-native-0.3.0/run-41175666914/`。同一 commit 的 push
+  run `41175661246` 被并发策略取消（cancelled，非失败）。
 - 真实 endpoint 对话与生产凭据使用；生产安全 adapter 的 TLS peer/host、redirect、可信 status、
   接收限额、期限/取消/回收及有效/无效证书动态验收。
 - 设备端 `file_exec` 的物理取消：已开始子进程只保证 `/bin/timeout` 墙钟上限，不能保证立即撤销。
