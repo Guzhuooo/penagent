@@ -49,7 +49,7 @@ test('native adapter maps request/response and disables insecure HTTP outside de
 test('native adapter allows insecure HTTP only for explicit development mode', async () => {
   const fake = fakeModule();
   const requestJson = createNativeRequestJson(null, async () => fake.module);
-  await requestJson(options({ url: 'http://<host-lan-ip>:8787/v1/chat/completions', developmentMode: true }));
+  await requestJson(options({ url: 'http://192.168.1.10:8787/v1/chat/completions', developmentMode: true }));
   assert.equal(fake.record.instances[0].requests[0].allowInsecureHttp, true);
 });
 

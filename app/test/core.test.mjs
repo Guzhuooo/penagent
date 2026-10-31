@@ -42,10 +42,10 @@ test('settings normalize endpoint, toggles, HTTPS, localhost fake keys and field
   assert.equal(normalizeSettings().tools.execShell, false);
   assert.equal(completionEndpoint({ baseUrl: 'http://127.0.0.1:8900/v1/', developmentMode: true, apiKey: 'mock-key' }), 'http://127.0.0.1:8900/v1/chat/completions');
   // Device-to-host development mock cannot use adb reverse on this firmware; private LAN is the same dev-only exception.
-  assert.equal(completionEndpoint({ baseUrl: 'http://<device-lan-ip>:8787/v1', developmentMode: true, apiKey: 'mock-key' }), 'http://<device-lan-ip>:8787/v1/chat/completions');
+  assert.equal(completionEndpoint({ baseUrl: 'http://192.168.1.10:8787/v1', developmentMode: true, apiKey: 'mock-key' }), 'http://192.168.1.10:8787/v1/chat/completions');
   for (const settings of [
-    { baseUrl: 'http://<device-lan-ip>:8787/v1', apiKey: 'mock-key' },
-    { baseUrl: 'http://<device-lan-ip>:8787/v1', developmentMode: true, apiKey: 'real-secret' },
+    { baseUrl: 'http://192.168.1.10:8787/v1', apiKey: 'mock-key' },
+    { baseUrl: 'http://192.168.1.10:8787/v1', developmentMode: true, apiKey: 'real-secret' },
     { baseUrl: 'http://8.8.8.8:8787/v1', developmentMode: true, apiKey: 'mock-key' },
     { baseUrl: 'http://example.com/v1' }, { baseUrl: 'https://user:pass@example.com' },
     { baseUrl: 'https://example.com?key=x' }, { baseUrl: 'https://example.com/#x' },
