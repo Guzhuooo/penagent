@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace httpx {
-constexpr std::size_t kMaxBody = 128 * 1024;
+constexpr std::size_t kMaxBody = 2 * 1024 * 1024;
 constexpr std::size_t kMaxResponse = 2 * 1024 * 1024;
 constexpr std::size_t kMaxHeaders = 64;
 constexpr std::size_t kMaxHeaderBytes = 16 * 1024;
