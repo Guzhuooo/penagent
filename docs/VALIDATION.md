@@ -7,7 +7,7 @@
 
 | 检查 | 结果 / 证据 |
 |---|---|
-| JS 全量 | legacy **5/5** + Node **141/141**，0 fail；`docs/evidence/js-tests-0.6.0.txt` |
+| JS 全量 | legacy **5/5** + Node **141/141**，0 fail；`docs/evidence/js-tests-0.6.0.txt`；CI run [41187998797](https://github.com/Guzhuooo/penagent/actions/runs/41187998797) 绿 |
 | Python 策略 | **22/22**；`docs/evidence/ci-policy-tests-0.6.0.txt` |
 | 编译/AMR | 0.6.0 debug **646182 B / SHA `a9990ca0…eadfd`**；production **633053 B / SHA `817a4956…9f000`**；`verify-amr.py --native-sha256` 通过，含唯一 native `.so` SHA `970b6a33…` |
 | 真机安装 | 0.6.0 debug，uninstall/install/start ret:0 |

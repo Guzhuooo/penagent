@@ -18,6 +18,7 @@
 - **测试**：新增 `plugins.test.mjs`（plain text、规范、store 热重载/坏文件、harness 插件工具+提示词注入、reasoning 保留）；全套 **141/141 + legacy 5/5**，Python 22/22。
 - **真机**：0.6.0 debug 安装 ret:0；真实 Anthropic endpoint probe 完成 clock 工具（completed, toolCalls 1, 5598ms）；工作区插件 `weekday_cn` 在工具页出现。截图 `app/artifacts/0.6.0/`。
 - **未完成**：折叠 UI 真机视觉（手工 seed 会话未加载）、插件 reload 按钮真机点击截图；真实 endpoint 仍单账户/单模型；流式、Falcon 线程/取消、IME/内存/多分辨率未验。
+- **最终 CI**：commit `b40b6a2` 的 `native-compile` run [41187998797](https://github.com/Guzhuooo/penagent/actions/runs/41187998797) 全绿（JS 141/141、策略 22/22、CTest 1/1、AArch64 smoke）。
 - **产物**：debug **646182 B / SHA a9990ca0…eadfd**，production **633053 B / SHA 817a4956…9f000**，含 native `.so` `970b6a33…`；证据 `docs/evidence/native-device-0.6.0.txt`。
 
 ---
