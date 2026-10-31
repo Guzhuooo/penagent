@@ -29,12 +29,16 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
 | [40168752041](https://github.com/Guzhuooo/penagent/actions/runs/40168752041) | push | `f4a020e` | 93/93 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.63s） | 2 个目标文件 ELF64/AArch64，SHA-256 与上次一致 | 绿 |
 | [40169416478](https://github.com/Guzhuooo/penagent/actions/runs/40169416478) | push | `824ffaf` | 93/93 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.64s） | 2 个目标文件 ELF64/AArch64，SHA-256 与前两次一致 | 绿 |
 | [41175666914](https://github.com/Guzhuooo/penagent/actions/runs/41175666914) | workflow_dispatch | `bc01903` | **124/124** 通过（最终 0.3.0 源码） | 22/22 通过 | 1/1 通过（1.64s） | 2 个目标文件 ELF64/AArch64 | 绿 |
+| [41179510006](https://github.com/Guzhuooo/penagent/actions/runs/41179510006) | push | `58f5bc9` | **126/126** 通过（node 20.20.2） | 22/22 通过 | 1/1 通过（1.64s） | 2 个目标文件 ELF64/AArch64，SHA-256 与之前一致 | 绿 |
 
 明细见各 `run-<id>.md` 与对应 `run-<id>/` 目录。
 
-仓库最后一次被本 workflow 完整验证的 commit 是 `bc01903`（run 41175666914，最终 0.3.0
-源码：emoji 替换、自造工具、工作区 file_* 工具）。同一 commit 的 push 触发 run
-`41175661246` 因并发策略被手动 run 取消（cancelled，非失败）。
+当前 HEAD 的验证状态：commit `58f5bc9` 上 **两个 workflow 同时全绿** —
+`native-compile.yml` run 41179510006（JS 126/126、策略 22/22、CTest 1/1、
+AArch64 冒烟）与 `native-device-build.yml` run 41179509958（设备插件构建 + 静态审计，
+`.so` SHA-256 与首次绿 run 41179283105 相同）。更早的最终 0.3.0 源码为 `bc01903`
+（run 41175666914）；同一 commit 的 push 触发 run `41175661246` 因并发策略被手动 run
+取消（cancelled，非失败）。
 
 ## 设备构建记录（`.github/workflows/native-device-build.yml`）
 
@@ -44,6 +48,7 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
 | run id | 触发 | commit | 工具链 | 产物 SHA-256 | 审计 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- |
 | [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105) | push | `82783bb` | ubuntu:18.04 / GCC 7.5.0 (`aarch64-linux-gnu-g++`), cmake 3.18.4 | `22d4e811…4fcf5cd`（488,520 B） | ELF64/AArch64 DYN、无 INTERP/RPATH/TEXTREL、DT_NEEDED 全部有设备 provider、版本符号 ≤ 设备上限 | 绿 |
+| [41179509958](https://github.com/Guzhuooo/penagent/actions/runs/41179509958) | push | `58f5bc9` | 同上（容器 digest 相同） | `22d4e811…4fcf5cd`（与上次一致，可复现） | 同上，全部通过 | 绿 |
 
 明细与下载的 artifact 见 `native-device-run-41179283105.md` 与
 `native-device-run-41179283105/` 目录（`.so` 被 `.gitignore` 的 `*.so` 排除，只在
