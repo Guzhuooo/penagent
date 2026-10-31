@@ -33,12 +33,14 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
 
 明细见各 `run-<id>.md` 与对应 `run-<id>/` 目录。
 
-当前 HEAD 的验证状态：commit `58f5bc9` 上 **两个 workflow 同时全绿** —
-`native-compile.yml` run 41179510006（JS 126/126、策略 22/22、CTest 1/1、
-AArch64 冒烟）与 `native-device-build.yml` run 41179509958（设备插件构建 + 静态审计，
-`.so` SHA-256 与首次绿 run 41179283105 相同）。更早的最终 0.3.0 源码为 `bc01903`
-（run 41175666914）；同一 commit 的 push 触发 run `41175661246` 因并发策略被手动 run
-取消（cancelled，非失败）。
+当前 HEAD 的验证状态：commit `9cab02e` 上 `native-device-build.yml` run
+[41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061) 全绿
+（`.so` 488,520 B / SHA `970b6a33…10b4a6`，request body 上限 2 MiB）；更早 commit
+`58f5bc9` 上 `native-compile.yml` run 41179510006（JS 126/126、策略 22/22、CTest 1/1、
+AArch64 冒烟）与 `native-device-build.yml` run 41179509958 全绿（旧 body 上限，
+`.so` SHA `22d4e811…4fcf5cd`）。同一 commit 的 push 触发 run `41175661246` 因并发策略被
+手动 run 取消（cancelled，非失败）。最终 0.4.0 AMR 已使用 `970b6a33…` 的 `.so`，并在
+Y02 真机通过原生 HTTPS POST 200 与过期证书 TLS_ERROR 拒绝探针。
 
 ## 设备构建记录（`.github/workflows/native-device-build.yml`）
 
@@ -49,10 +51,10 @@ AArch64 冒烟）与 `native-device-build.yml` run 41179509958（设备插件构
 | --- | --- | --- | --- | --- | --- | --- |
 | [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105) | push | `82783bb` | ubuntu:18.04 / GCC 7.5.0 (`aarch64-linux-gnu-g++`), cmake 3.18.4 | `22d4e811…4fcf5cd`（488,520 B） | ELF64/AArch64 DYN、无 INTERP/RPATH/TEXTREL、DT_NEEDED 全部有设备 provider、版本符号 ≤ 设备上限 | 绿 |
 | [41179509958](https://github.com/Guzhuooo/penagent/actions/runs/41179509958) | push | `58f5bc9` | 同上（容器 digest 相同） | `22d4e811…4fcf5cd`（与上次一致，可复现） | 同上，全部通过 | 绿 |
+| [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061) | push | `9cab02e` | 同上 | `970b6a33…10b4a6`（488,520 B，body cap 2 MiB） | 同上；已打进 0.4.0 AMR，真机通过原生 HTTPS/TLS 探针 | 绿 |
 
-明细与下载的 artifact 见 `native-device-run-41179283105.md` 与
-`native-device-run-41179283105/` 目录（`.so` 被 `.gitignore` 的 `*.so` 排除，只在
-Actions artifact 与本地下载副本中）。
+明细与下载的 artifact 见各 `native-device-run-<id>.md` 与目录（`.so` 被 `.gitignore` 的
+`*.so` 排除，只在 Actions artifact 与本地下载副本中）。
 
 ## 复现 / 重跑
 

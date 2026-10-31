@@ -18,11 +18,14 @@
   **本机从未执行** CMake、编译器或 CTest。
 - 新增 `.github/workflows/native-device-build.yml`：在 `ubuntu:18.04` 容器内用 2018 年
   代 GCC 7.5.0 AArch64 交叉工具链 + `native/device-bundle/`（真机 sysroot）构建 Falcon
-  JSAPI 插件，并对产物做 fail-closed 的 ELF/DT_NEEDED/版本符号审计。已绿运行：run
+  JSAPI 插件，并对产物做 fail-closed 的 ELF/DT_NEEDED/版本符号审计。最新已绿运行：run
+  [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061)
+  @ `9cab02e`，产物 `libjsapi_httpx.so` SHA-256
+  `970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6`（488,520 bytes；
+  request body 上限已从 128 KiB 对齐到 2 MiB）。首绿 run
   [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105)
-  @ `82783bb`，产物 `libjsapi_httpx.so` SHA-256
-  `22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd`（488,520 bytes）。
-  详见下节与 `docs/evidence/ci-native-0.3.0/native-device-run-41179283105/`。
+  @ `82783bb` 的旧 SHA 为 `22d4e811…4fcf5cd`；详见下节与
+  `docs/evidence/ci-native-0.3.0/native-device-run-41180136061/`。
 - **仍存在的边界**：`.github/workflows/native-manual.yml` + `native/ci-policy.json`
   （`enabled: false`）仍等待用户批准具体 vendor toolchain/SDK/sysroot bundle、artifact
   披露范围与 `native-reviewed` Environment 保护；它是独立的发布审核通道，本次真机自取
@@ -75,8 +78,14 @@
   仓库内 `manifest.json` 逐字节一致 → `ubuntu:18.04` 容器内编译（含
   `CheckHttpxElf.cmake` post-build gate）→ 宿主机静态审计 → 打包 artifact。
 - 已绿运行：run
+  [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061)
+  @ `9cab02e`（request body 上限提升到 2 MiB 后重建；488,520 B /
+  `970b6a33…10b4a6`）；此前 run
+  [41179509958](https://github.com/Guzhuooo/penagent/actions/runs/41179509958)
+  @ `58f5bc9` 与 run
   [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105)
-  @ `82783bb`，job "AArch64 plugin build (2018 toolchain + device bundle)" 全部步骤成功。
+  @ `82783bb` 使用旧 body 上限，产物 SHA 为 `22d4e811…4fcf5cd`。
+  job "AArch64 plugin build (2018 toolchain + device bundle)" 全部步骤成功。
 - 工具链（全部在 Actions 容器内，本机未编译）：`ubuntu:18.04`
   （`ubuntu@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98`，
   image id `sha256:f9a80a55f492e823bf5d51f1bd5f87ea3eed1cb31788686aa99a2fb61a27af6a`）；
@@ -90,7 +99,8 @@
   `HTTPX_BUILD_TESTS=OFF`，显式传入 toolchain file、`HTTPX_SYSROOT`、`HTTPX_SDK_DIR`
   与 curl include/library；curl 7.79.1 `curlver.h` pin 未改。
 - 产物：`libjsapi_httpx.so`，488,520 bytes，SHA-256
-  `22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd`。
+  `970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6`
+  （2018 工具链 + 设备 sysroot；request body 上限 2 MiB）。
 - 静态审计（`elf-report.json`，不匹配即失败）：ELF64 little-endian AArch64 DYN；
   SONAME `libjsapi_httpx.so`；无 PT_INTERP/RPATH/RUNPATH/TEXTREL；导出
   `custom_init_jsapis`；DT_NEEDED = `libcurl.so.4, libstdc++.so.6, libgcc_s.so.1,

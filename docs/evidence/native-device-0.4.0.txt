@@ -1,0 +1,46 @@
+0.4.0 usable version — native transport + file tools on Y02 (2026-10-31)
+Profile: Y02-3562 / firmware 4.9.7 / appid 8002026100700001 / QuickJS 20200705
+ADB serial <device-serial>. Host WLAN <host-lan-ip>, device wlan0 <device-lan-ip>.
+
+PACKAGE
+- app/artifacts/0.4.0/penagent-0.4.0-debug.amr     638697 B  sha256 4ad0aac9aee31b748d215a8dc1e305906be60931e565e8b8a0b64f62789558cf
+- app/artifacts/0.4.0/penagent-0.4.0-production.amr 626825 B sha256 b2f7621ac3f47d7d7bdba7fe9c0460b8c4e99183a7e0070ef6111bfbf46b9eff
+- Native library inside AMR: libs/libjsapi_httpx.so, 488,520 B, SHA-256
+  970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6
+  (built in Actions run 41180136061, 2018 GCC 7.5.0 + device-derived sysroot; body cap 2 MiB)
+- verify-amr.py with --native-sha256: debug/production both pass; 11 certified resources,
+  ELF64 little-endian AArch64, expected SHA; no other .so.
+
+INSTALL
+- miniapp_cli uninstall/install returned ret 0; installed version 0.4.0.
+- Native module load is exercised by the app's own transport (dynamic import('httpx')).
+
+DEVICE PROBES (probe page)
+1) 原生 HTTPS (POST JSON to https://httpbin.org/post via native httpx):
+   UI: 原生状态 200 · 420 B · 689 ms
+   log: [pa:probe] native {"status":200,"bytes":420,"elapsedMs":689,"method":"POST"}
+2) 原生 TLS 拒绝 (GET https://expired.badssl.com/):
+   UI: 预期拒绝：TLS_ERROR
+   log: [pa:probe] native tls rejected {"code":"TLS_ERROR"}
+   => TLS peer/hostname verification is active; invalid certificate is rejected, not silently accepted.
+Screenshot: app/artifacts/0.4.0/probe-final.png
+
+AI FILE LOOP THROUGH NATIVE TRANSPORT (development LAN mock, synthetic key)
+- Settings: baseUrl http://<host-lan-ip>:8787/v1, model mock-gpt, developmentMode=true,
+  synthetic Bearer test-synthetic-key, file_* tools enabled.
+- Mock returned 3 chat completions; the harness executed 5 tool calls:
+  file_write notes/ai.txt, file_read, file_exec, file_write notes/keep.txt, file_delete notes/ai.txt.
+- Device log: [pa:workspace] ai-file-test {"status":"completed","toolCalls":5}
+- Filesystem: notes/keep.txt = "kept by synthetic AI"; notes/ai.txt absent.
+Screenshot: app/artifacts/0.4.0/workspace-ai-final.png
+This path used the native Module (no dev curl log lines); it demonstrates the same requestJson
+adapter used for production HTTPS also drives the harness/tool loop end to end.
+
+SECURITY / BOUNDARY
+- Native core requires HTTPS unless allowInsecureHttp is true only for explicit development
+  private hosts; TLS peer + hostname verify, no redirects, real HTTP status, caller timeout,
+  cancelAll().
+- Production OpenAI-compatible endpoint with a real key was NOT tested (no real credential);
+  the 200 POST proves the native transport/TLS/JSON path, not the user's API account.
+- Device settings were reset to blank production defaults afterwards (no key/URL/dev mode,
+  file_exec=false); workspace test files cleaned; mock stopped.

@@ -1,0 +1,45 @@
+container: ubuntu:18.04 (pinned by digest in the workflow)
+date_utc: 2026-10-31T07:19:46Z
+cmake: cmake version 3.18.4
+make: GNU Make 4.1
+compiler: aarch64-linux-gnu-g++ (Ubuntu/Linaro 7.5.0-3ubuntu1~18.04) 7.5.0
+compiler_triple: aarch64-linux-gnu
+compiler_print_sysroot: /
+linker: GNU ld (GNU Binutils for Ubuntu) 2.30
+nm: GNU nm (GNU Binutils for Ubuntu) 2.30
+readelf: GNU readelf (GNU Binutils for Ubuntu) 2.30
+binutils-aarch64-linux-gnu 2.30-21ubuntu1~18.04.9
+g++-aarch64-linux-gnu 4:7.4.0-1ubuntu2.3
+libc6-dev-arm64-cross 2.27-3ubuntu1cross1.1
+
+sysroot_provenance: device-bundle overlay + Ubuntu 18.04 cross dev files
+device_libraries_overlaid:
+  ld-linux-aarch64.so.1 f1b2e78496f3f676b4fb163f85a2ecf6edc344a68b678df71a5e00787eb9b892
+  libatomic.so.1.2.0 79f167391a969c263e8465c9700c78a5b3f2d7e98f7699a9264846780a7c082c
+  libc.so.6 e48e3acd4455291f8efccfd51995da6a714b2f1cf71400641168ca9cee4dc18e
+  libcares.so.2.5.1 e1744d16409933c066edb551ecf9cfd4a79b562057fccc9310055c6438b05349
+  libcrypto.so.1.1 6faf436be9824e7b219a984238c2372e8c08af5be1f953a008258ecbe2f3d5ec
+  libcurl.so.4.7.0 c082e98468b87c65df32fb16a40ccafecda9000f5282f7fdebc9d8075ecd4ad0
+  libdl.so.2 6f53ce8bae4a2786d6844eaa6d6defbe76661c3599707d5e57a986c5ff9a8d43
+  libgcc_s.so.1 8a59850e2a830d353ed287e55ef17b9dc1f7101fb87c6f581f4e3ddf0f9acf69
+  libgmp.so.10.4.1 37fb140a7cb779348ebaeff875fe11aa8671677f6df8bf9379cd2590284a310e
+  libgnutls.so.30.30.0 3cba6cce6cae00e6ce443b76c28b521d7e21e1e1abf612d669c2578b2552e9ae
+  libhogweed.so.6.4 0cc4a7db24400c02ad3185a1c8b620b3a9d20b4ed0c7101d126246b64718d4f4
+  libiconv.so.2.6.0 e4dadf7a39032b3d4a6fda76aaee96516f566ad037877786ef38f5af827e5377
+  libidn2.so.0.3.7 993dfa6ea3a1fd904ff3b2cc7c3bfde5e66d017d16e9da3b13ce08ba84ce127e
+  libm.so.6 6c20805065a499d7b419f3c611c1fc62fa0421c3bcc1033d5bd99f4c52b2dc52
+  libnettle.so.8.4 d5fab4f5fffea91d13e618a5fefc2b985574e30de21f6c0ca5724e06e1f419f1
+  libpsl.so.5.3.2 d69469d7e3b2ac388e39a02370a3a56d05519743e903f672bc81459dcb73ce2f
+  libpthread.so.0 0efda25e13505550293f1a281ba948a728a155d1a915261aa00f9cdcb0300adc
+  librt.so.1 9c03fe193be4b7d04c6a2fdbc87795e3bcacd883cba4c4e37786f07b267c0fc4
+  librtmp.so.1 a7e01bfa8c8df6b703d7014fcc983598a0f2476253ca96e13ac259f1b3a42c04
+  libssl.so.1.1 6d82b81b9edd47b167ba1dc90debd6510f14a3e4dc9ecd8e5eacdcc70a62318b
+  libstdc++.so.6.0.29 a7f4af5cc3e2a6e09d86ffa0f6807122621805f9ac7f41bce1b79feed5fbd037
+  libtasn1.so.6.6.1 5f7ef79f484c53ac0fe47416ccd210b19341f78a2cd0460969b759ae3081e6a5
+  libunistring.so.2.1.0 703f24bbf8effdcc8f7d41d7f060e4210fac304628fd52148094561e5575986c
+  libz.so.1.2.11 3703d76eb1a8f5bbbbec471a33d9efa827bfcfbb86e56f430130e69de406a007
+curl_headers: ba01ad5056aa94545a7764c200a782fb734139e9d1d94d7842c44a55091aea52 curlver.h
+
+container_image_and_id:
+ubuntu@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98
+sha256:f9a80a55f492e823bf5d51f1bd5f87ea3eed1cb31788686aa99a2fb61a27af6a

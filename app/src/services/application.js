@@ -1,6 +1,7 @@
 import { createHarness } from '../core/index.js';
 import { requestJson } from './net/index.js';
 import { createDevRequestJson } from './net/dev.js';
+import { createNativeRequestJson } from './net/native.js';
 import { getJson, setJson } from './storage/index.js';
 import { getDeviceInfo, execPreset, headProbe } from './device/index.js';
 import { getWorkspaceAdapter } from './device/workspace.js';
@@ -10,9 +11,14 @@ let application = null;
 export function getApplication() {
   if (!application) {
     const workspace = getWorkspaceAdapter();
-    // Development mode may use curl for a real status line; every other
-    // settings path falls back to the fail-closed production adapter.
-    const transport = createDevRequestJson(workspace, requestJson);
+    // Production/HTTPS uses the native httpx module (TLS verify, no redirects,
+    // real status, timeout, cancelAll). If the module is unavailable, explicit
+    // development mode falls back to device curl; every other path uses the
+    // fail-closed platform adapter.
+    const developmentTransport = createDevRequestJson(workspace, requestJson);
+    const transport = createNativeRequestJson(function (options) {
+      return options && options.developmentMode === true ? developmentTransport(options) : requestJson(options);
+    });
     application = createHarness({ requestJson: transport, getJson, setJson, deviceInfo: getDeviceInfo, execPreset, headProbe, workspace });
   }
   return application;

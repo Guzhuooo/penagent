@@ -8,6 +8,8 @@
       <div class="row"><div class="button" @click="runStorage"><text class="label">存储</text></div><text class="result">{{ storageResult }}</text></div>
       <div class="row"><div class="button" @click="runInput"><text class="label">输入法</text></div><text class="result">{{ inputResult }}</text></div>
       <div class="row"><div class="button" @click="runExec"><text class="label">预设状态</text></div><text class="result">{{ execResult }}</text></div>
+      <div class="row"><div class="button" @click="runNative"><text class="label">原生 HTTPS</text></div><text class="result">{{ nativeResult }}</text></div>
+      <div class="row"><div class="button" @click="runNativeTls"><text class="label">原生 TLS 拒绝</text></div><text class="result">{{ nativeTlsResult }}</text></div>
       <div class="units"><div class="u10"></div><div class="u20"></div><div class="u30"></div><text class="units-label">10 / 20 / 30vw，10 / 15 / 25vh</text></div>
     </scroller>
   </div>
@@ -17,6 +19,7 @@ import { probeContract } from '../../services/net/index.js';
 import { getJson, setJson } from '../../services/storage/index.js';
 import * as input from '../../services/input/index.js';
 import { execPreset } from '../../services/device/index.js';
+import { nativeProbe } from '../../services/net/native.js';
 import { navigate } from '../../services/navigation.js';
 import { errorLabel } from '../../services/application.js';
 import { log } from '../../services/log/index.js';
@@ -24,7 +27,7 @@ import { MOCK_ORIGIN } from '../../services/device/development.js';
 const MOCK_BASE = MOCK_ORIGIN;
 export default {
   name: 'ProbePage',
-  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测' }; },
+  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测', nativeResult: '待测', nativeTlsResult: '待测' }; },
   mounted() {
     this.active = true; this.generation = 0; this.destroyed = false;
     this.attachInput();
@@ -76,6 +79,36 @@ export default {
       const generation = this.generation;
       try { const result = await execPreset({ commandId: 'system_arch', params: {} }); if (this.valid(generation)) this.execResult = result.status + '；无 stdout'; }
       catch (error) { if (this.valid(generation)) this.execResult = '不可用：执行期限与停止能力未验证'; }
+    },
+    async runNative() {
+      const generation = this.generation;
+      this.nativeResult = '请求中…';
+      const started = Date.now();
+      try {
+        const result = await nativeProbe({
+          url: 'https://httpbin.org/post', method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ probe: 'native-httpx', value: 42 }), timeout: 12000,
+        });
+        if (!this.valid(generation)) return;
+        this.nativeResult = '原生状态 ' + result.status + ' · ' + result.bytes + ' B · ' + (Date.now() - started) + ' ms';
+        log.warn('[pa:probe] native', { status: result.status, bytes: result.bytes, elapsedMs: Date.now() - started, method: 'POST' });
+      } catch (error) { if (this.valid(generation)) { this.nativeResult = errorLabel(error) + '（原生模块或 TLS 不可用）'; log.warn('[pa:probe] native unavailable', { code: error && error.code }); } }
+    },
+    async runNativeTls() {
+      const generation = this.generation;
+      this.nativeTlsResult = '请求中…';
+      try {
+        const result = await nativeProbe({ url: 'https://expired.badssl.com/', method: 'GET', timeout: 12000 });
+        if (!this.valid(generation)) return;
+        this.nativeTlsResult = '意外通过：状态 ' + result.status;
+        log.warn('[pa:probe] native tls unexpected', { status: result.status });
+      } catch (error) {
+        if (!this.valid(generation)) return;
+        const code = (error && error.code) || 'unknown';
+        this.nativeTlsResult = '预期拒绝：' + code;
+        log.warn('[pa:probe] native tls rejected', { code: code });
+      }
     },
   },
 };
