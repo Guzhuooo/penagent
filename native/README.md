@@ -5,8 +5,7 @@
 
 ## 当前状态（2026-10-31）
 
-- 用户已授权创建**私有**仓库 `https://github.com/Guzhuooo/penagent`（默认分支 `main`）；
-  public 可见性未授权，仓库实际为 private。
+- 仓库 `https://github.com/Guzhuooo/penagent` 已按要求设为 **public**（默认分支 `main`）。
 - 新增实用型 `.github/workflows/native-compile.yml`，已在 GitHub Actions 真实跑绿：
   JS 测试、纯 Python 策略合同测试、宿主 CMake 编译 + CTest、AArch64 compile-only
   冒烟。已绿运行：run
@@ -17,8 +16,10 @@
   逐 run 明细、ctest 输出与下载的 artifact 见 `docs/evidence/ci-native-0.3.0/`。
   **本机从未执行** CMake、编译器或 CTest。
 - 新增 `.github/workflows/native-device-build.yml`：在 `ubuntu:18.04` 容器内用 2018 年
-  代 GCC 7.5.0 AArch64 交叉工具链 + `native/device-bundle/`（真机 sysroot）构建 Falcon
-  JSAPI 插件，并对产物做 fail-closed 的 ELF/DT_NEEDED/版本符号审计。最新已绿运行：run
+  代 GCC 7.5.0 AArch64 交叉工具链 + 操作者自备的真机 sysroot bundle 构建 Falcon JSAPI
+  插件，并对产物做 fail-closed 的 ELF/DT_NEEDED/版本符号审计。**公开仓库不附带设备 bundle**
+  （SDK/设备库/`libfalcon.so` 的再分发需另行许可），workflow 默认跳过；需设置仓库变量
+  `NATIVE_DEVICE_BUNDLE_ENABLED=true` 并自行生成 bundle。最新已绿运行：run
   [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061)
   @ `9cab02e`，产物 `libjsapi_httpx.so` SHA-256
   `970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6`（488,520 bytes；
@@ -63,20 +64,21 @@
 - 重跑：`gh workflow run native-compile.yml --ref main`，然后
   `gh run list --workflow native-compile.yml` / `gh run view <run-id>`。
 
-## 设备插件构建：2018 工具链 + 真机 sysroot（已在 Actions 跑绿）
+## 设备插件构建：2018 工具链 + 真机 sysroot（模板；bundle 不随公开仓库）
 
-`native/device-bundle/` 是从真机 `adb` 采集的构建输入（SDK + curl 7.79.1 headers +
-24 个设备运行库 + `libfalcon.so`，逐文件与设备 `sha256sum` 交叉校验并写入
-`manifest.json`；布局、SHA、provenance 见该目录 README）。`native/cmake/` 提供：
+`native/device-bundle/build_bundle.py` 从操作者自己的真机 `adb` 采集构建输入（SDK +
+curl 7.79.1 headers + 设备运行库 + `libfalcon.so`，逐文件与设备 `sha256sum` 交叉校验）。
+公开仓库只保留脚本与规范，**不提交** `device-bundle.tar.xz` / `manifest.json`。
+`native/cmake/` 提供：
 
 - `toolchain-aarch64-linux-gnu-2018.cmake`：显式 AArch64 GNU 交叉工具链与 sysroot；
 - `device-build-2018.sh`：仅在容器内执行，装配 sysroot 并 configure/build；
 - `audit_device_elf.py`：在 runner 宿主机运行的 fail-closed ELF/ABI 审计。
 
-- workflow：`.github/workflows/native-device-build.yml`（`workflow_dispatch`；push 到
-  `main` 且改动该 workflow 或 `native/**` 时也运行）。流程：校验 bundle 压缩包 SHA +
-  仓库内 `manifest.json` 逐字节一致 → `ubuntu:18.04` 容器内编译（含
-  `CheckHttpxElf.cmake` post-build gate）→ 宿主机静态审计 → 打包 artifact。
+- workflow：`.github/workflows/native-device-build.yml`（仅 `workflow_dispatch`；公开仓库
+  默认跳过，需 `NATIVE_DEVICE_BUNDLE_ENABLED=true` + 操作者自备 bundle）。流程：操作者
+  提供 bundle → `ubuntu:18.04` 容器内编译（含 `CheckHttpxElf.cmake` post-build gate）→
+  宿主机静态审计 → 打包 artifact。历史绿 run 证据仍保留在 `docs/evidence/`。
 - 已绿运行：run
   [41180136061](https://github.com/Guzhuooo/penagent/actions/runs/41180136061)
   @ `9cab02e`（request body 上限提升到 2 MiB 后重建；488,520 B /

@@ -12,6 +12,8 @@ node_modules/
 native/sdk/
 native/build*/
 native/bundles/
+native/device-bundle/device-bundle.tar.xz
+native/device-bundle/manifest.json
 *.so
 
 # Never include local credentials or secrets in an eventual repository.

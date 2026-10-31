@@ -1,19 +1,23 @@
 # Device-derived native bundle — profile `y02-4.9.7`
 
-本目录是**设备来源**的构建输入，仅供 GitHub Actions 中的 native 插件构建/静态审计使用：
+本目录是**设备来源**的构建输入模板，供 GitHub Actions 中的 native 插件构建/静态审计使用：
 SDK + curl 7.79.1 headers + 真机运行库 + `libfalcon.so`。所有 C/C++ configure、编译、
 链接、ELF 审计都在 `.github/workflows/native-device-build.yml` 的容器里执行，**不在本机
 编译**；本目录只做采集与打包。
+
+> **公开仓库不附带 `device-bundle.tar.xz` / `manifest.json`。** 这两个文件包含用户设备的
+> SDK、固件运行库和 `libfalcon.so`，是否可再分发取决于 SDK/固件许可，不能随公开仓库发布。
+> 请在你自己的设备上用 `build_bundle.py` 生成，并只在你自己的环境/仓库中保存（本地已加入
+> `.gitignore`）。`native-device-build.yml` 默认跳过；需要时设置仓库变量
+> `NATIVE_DEVICE_BUNDLE_ENABLED=true` 并自行提供 bundle。
 
 ## 内容
 
 | 文件 | 说明 |
 | --- | --- |
-| `device-bundle.tar.xz` | 7,286,284 bytes，SHA-256 `2348651ea6a21e0a323b5cc974c03212f09ae0050a8b968750a9c90c4bd0063c` |
-| `manifest.json` | 与压缩包内 `manifest.json` 逐字节一致（SHA-256 `5998863add7a40df66b638632ce750cec2d0b2ed5c95ce6cefb8e0bc77c987d0`），含全部 121 个文件的 SHA-256、设备路径与版本证据 |
-| `build_bundle.py` | 采集/打包脚本（只做 adb pull、下载校验、哈希与打包；不编译） |
+| `build_bundle.py` | 采集/打包脚本（只做 adb pull、下载校验、哈希与打包；不编译）；输出 `device-bundle.tar.xz` + `manifest.json` |
 
-压缩包布局：
+生成后的压缩包布局：
 
 ```text
 manifest.json
@@ -46,8 +50,8 @@ provenance/                  adb 命令、设备身份、设备端 sha256sum 交
 - curl headers：官方 `https://curl.se/download/curl-7.79.1.tar.gz`，来源 SHA-256
   `370b11201349816287fb0ccc995e420277fbfcaf76206e309b3f60f0eda090c2`，只取
   `include/curl/`；`curlver.h` 中 `LIBCURL_VERSION_NUM` = `0x074f01`。
-- 压缩包本身在 workflow 中按上面的 SHA-256 校验，且压缩包内 `manifest.json` 必须与仓库
-  内的 `manifest.json` 逐字节一致，否则立即失败。
+- 生成后由本机脚本自行校验压缩包 SHA-256；workflow 仅在操作者显式启用并自行提供 bundle
+  时运行，`NATIVE_DEVICE_BUNDLE_SHA256` 可选。
 
 设备 ABI 证据（由设备库的 ELF 版本定义得出，记入 `manifest.json`）：
 
@@ -81,14 +85,13 @@ python native/device-bundle/build_bundle.py \
 ```
 
 脚本会重新校验 zip/curl SHA-256、重新 adb pull 并交叉校验设备哈希、重建
-`manifest.json` 与压缩包。若输出 SHA-256 变化，必须同步更新
-`.github/workflows/native-device-build.yml` 的 `BUNDLE_ARCHIVE_SHA256`，并作为一次
-可审查的变更提交。
+`manifest.json` 与压缩包。公开仓库不提交这两个输出；如需 CI 使用，请在本地/私有 fork
+提供自己的 bundle，并按需设置仓库变量。
 
 ## 边界（不得越界声明）
 
-- 本 bundle 是**私有仓库**内的真机固件内容，仅供本项目的 CI 构建/审计；不得公开再
-  分发，也不代表 SDK/固件许可之外的授权。
+- 本 bundle 是用户自己的真机固件内容，仅供本项目的 CI 构建/审计；不得公开再分发，也不代表
+  SDK/固件许可之外的授权。公开仓库只保留采集脚本与规范，不保留 SDK/设备库/`libfalcon.so`。
 - 它不等于“vendor 批准的正式工具链 bundle”：`native-manual.yml` + `native/ci-policy.json`
   仍保持原样 disabled，本目录不替代该审批流程。
 - 构建出的 `.so` 只证明**静态**链接/ELF 结果；未安装进 AMR、未在设备加载，因此不声称

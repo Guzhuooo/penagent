@@ -17,11 +17,6 @@ name: Native device build (2018 toolchain, device sysroot)
 # native/ci-policy.json enabled:false) stays untouched and disabled.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/native-device-build.yml
-      - native/**
 
 permissions:
   contents: read
@@ -32,7 +27,10 @@ concurrency:
 
 env:
   BUNDLE_ARCHIVE: native/device-bundle/device-bundle.tar.xz
-  BUNDLE_ARCHIVE_SHA256: "001ec916cd6810e79752c08f72620efecab396a961fa17dcfae798805acf4f81"
+  # The public repo intentionally does not ship the device-derived sysroot bundle
+  # (SDK/device libraries/libfalcon). Operators may set this repository variable
+  # when running the build with their own bundle.
+  BUNDLE_ARCHIVE_SHA256: ${{ vars.NATIVE_DEVICE_BUNDLE_SHA256 }}
   BUNDLE_MANIFEST: native/device-bundle/manifest.json
   # 2018-era toolchain: Ubuntu 18.04 g++-aarch64-linux-gnu (GCC 7.5.0, glibc 2.27
   # dev headers) plus cmake==3.18.4.post1 from PyPI (bionic ships cmake 3.10).
@@ -46,6 +44,10 @@ defaults:
 jobs:
   device-build:
     name: AArch64 plugin build (2018 toolchain + device bundle)
+    # Disabled by default in the public repo because the device bundle is not shipped.
+    # Set repository variable NATIVE_DEVICE_BUNDLE_ENABLED=true and provide your own
+    # bundle (built with native/device-bundle/build_bundle.py on your own device).
+    if: ${{ vars.NATIVE_DEVICE_BUNDLE_ENABLED == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -55,16 +57,26 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Require an operator-provided device bundle (not shipped in public repo)
+        run: |
+          if [ ! -f "$BUNDLE_ARCHIVE" ]; then
+            echo "::error::No device bundle. Build native/device-bundle/device-bundle.tar.xz with build_bundle.py on your own device, then place it here; this public repo does not redistribute SDK/device libraries."
+            exit 1
+          fi
+
       - name: Verify committed device bundle (fail closed)
         run: |
-          echo "${BUNDLE_ARCHIVE_SHA256}  ${BUNDLE_ARCHIVE}" | sha256sum -c -
+          if [ -n "${BUNDLE_ARCHIVE_SHA256}" ]; then
+            echo "${BUNDLE_ARCHIVE_SHA256}  ${BUNDLE_ARCHIVE}" | sha256sum -c -
+          else
+            echo "No NATIVE_DEVICE_BUNDLE_SHA256 variable set; skipping pinned SHA check (operator-supplied bundle)."
+          fi
           mkdir -p "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/device-out"
           tar -xJf "$BUNDLE_ARCHIVE" -C "$RUNNER_TEMP/bundle"
-          cmp "$BUNDLE_MANIFEST" "$RUNNER_TEMP/bundle/manifest.json"
+          if [ -f "$BUNDLE_MANIFEST" ]; then cmp "$BUNDLE_MANIFEST" "$RUNNER_TEMP/bundle/manifest.json"; fi
           python3 native/cmake/audit_device_elf.py \
             --bundle "$RUNNER_TEMP/bundle" \
             --out "$RUNNER_TEMP/device-out/bundle-report.json"
-          echo "bundle archive sha256: ${BUNDLE_ARCHIVE_SHA256}"
           sha256sum "$RUNNER_TEMP/bundle/manifest.json" | tee "$RUNNER_TEMP/device-out/bundle-manifest.txt"
 
       - name: Resolve the pinned 2018-era container image

@@ -87,7 +87,7 @@ adb shell miniapp_cli start 8002026100700001 index
 
 ## GitHub Actions / Native
 
-仓库：`Guzhuooo/penagent`（private）。两条 workflow：
+仓库：`Guzhuooo/penagent`（public）。两条 workflow：
 
 - `native-compile.yml`：ubuntu-24.04 上跑 JS 测试、Python 策略测试、宿主 C++ CMake build +
   CTest、AArch64 compile-only 冒烟。所有 C/C++ 编译只在 Actions。
@@ -110,8 +110,9 @@ adb shell miniapp_cli start 8002026100700001 index
   过期证书请求被拒绝为 `TLS_ERROR`；LAN 合成 mock 的 3 次模型请求 / 5 次文件工具调用
   `status=completed`。证据 `docs/evidence/native-device-0.4.0.txt`。
 - 设备工具链/系统库：Y02 实机 glibc **2.36**、libstdc++ **6.0.29**（GLIBCXX 3.4.29）、
-  curl **7.79.1**；sysroot/bundle 来源、SHA 与 adb 命令见 [native/README.md](native/README.md)
-  与 `native/device-bundle/manifest.json`。
+  curl **7.79.1**；sysroot/bundle 来源与 adb 采集命令见 [native/README.md](native/README.md)
+  与 `native/device-bundle/build_bundle.py`。公开仓库**不附带**设备 SDK/运行库 bundle，
+  `native-device-build.yml` 默认跳过，需操作者自行从自己的设备生成。
 - **边界**：真实 OpenAI-compatible endpoint + 真实 key 未测（无凭据）；不声称具体 API 账户、
   Falcon 线程或所有固件兼容。`native-manual.yml` + `native/ci-policy.json` 仍保持 disabled，
   正式发布链路仍需获批 vendor bundle；`.gitignore` 忽略 `*.so`，二进制只在 Actions artifact
@@ -133,4 +134,5 @@ UI 高度 vh/vw 回归测试；native 插件已在 Actions 用 2018 工具链 + 
 仍未验证 / 未通过：其它 OpenAI/Anthropic 兼容服务的差异、IME 取消/重复开关、两次进出内存差值、
 多分辨率、Falcon 线程/取消全链路；单一真实 endpoint（yunqing/deepseek-v4.1-flash）已验证。`file_exec` 是高风险能力，默认关闭；开启后 AI 可执行工作区
 命令，用户需自行承担风险。`DEVICE_*`、profiles、截图、SDK 和本地运行数据包含设备/许可相关
-信息，不能把整个目录直接公开发布；公开/私有远程操作均须具体授权。
+信息，不能把整个目录直接公开发布；公开/私有远程操作均须具体授权。本仓库为 public，但
+**不包含**你的 API key、设备序列号、真机 sysroot/SDK 或本地运行数据。
