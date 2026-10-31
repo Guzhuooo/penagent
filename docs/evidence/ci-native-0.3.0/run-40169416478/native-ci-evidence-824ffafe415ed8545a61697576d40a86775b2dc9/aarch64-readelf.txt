@@ -1,0 +1,46 @@
+# AArch64 compile-only smoke
+compiler: aarch64-linux-gnu-g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+compiler triple: aarch64-linux-gnu
+note: objects were compiled from the same source as the host build,
+but they were never linked or executed; no target library was used.
+
+## build-cross/httpx_core.o
+build-cross/httpx_core.o: ELF 64-bit LSB relocatable, ARM aarch64, version 1 (GNU/Linux), not stripped
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  OS/ABI:                            UNIX - GNU
+  Type:                              REL (Relocatable file)
+  Machine:                           AArch64
+undefined symbols of interest:
+                 U curl_easy_cleanup
+                 U curl_easy_getinfo
+                 U curl_easy_init
+                 U curl_easy_perform
+                 U curl_easy_setopt
+                 U curl_free
+                 U curl_global_init
+                 U curl_slist_append
+                 U curl_slist_free_all
+                 U curl_url
+                 U curl_url_cleanup
+                 U curl_url_get
+                 U curl_url_set
+                 U curl_version_info
+                 U pthread_mutex_lock
+                 U pthread_mutex_unlock
+e7b4189c5e29bc99427d21545cd209f51ce735ba1e3f12104998d110aba5f86e  build-cross/httpx_core.o
+
+## build-cross/httpx_core_tests.o
+build-cross/httpx_core_tests.o: ELF 64-bit LSB relocatable, ARM aarch64, version 1 (GNU/Linux), not stripped
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  OS/ABI:                            UNIX - GNU
+  Type:                              REL (Relocatable file)
+  Machine:                           AArch64
+undefined symbols of interest:
+                 U bind
+                 U listen
+                 U pthread_once
+                 U socket
+2a022f36dc1a9c02b8c6ad6f579b029624f668757eee532ff2694b7998a59e2b  build-cross/httpx_core_tests.o
+

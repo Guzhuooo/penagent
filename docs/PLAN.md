@@ -62,9 +62,9 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | 边界 | 已有实现证据 | 尚不能据此宣称 |
 |---|---|---|
 | App / 页面 / 展示 | `app.js` 从 device profile 设置 viewport；BasePage 统一 release；chat/settings/probe 与四个 components 已存在；viewport.less 已是相对 vw/vh token | 首帧视觉通过、多分辨率 / 热区通过、两次进出无泄漏 |
-| core / tools | 已有 client、runner、context、schema、settings、分块 session / storage 与 registry / calculator / exec 预设；通过注入接 adapter | 真机 LLM / 工具闭环、QuickJS 兼容、存储冷启动与断写恢复全部通过 |
-| 设置 / IME | 设置页已有密钥遮罩、明文保存确认 / 清除入口；input 有 UUID / on-off / close 和 hide 守卫 | 系统 IME 遮罩、取消 / close / 前后台、持久化实际落盘已验 |
-| composition / net | 既有集成记录：composition 接 core；net 对象 data / 单次 POST / UTF-8 / 未知 status=null / 日志约束有宿主合同测试覆盖，本轮未重跑 | flat 二进制关闭 peer/host 校验、自动 redirect、不回传 HTTP status、无 caller timeout/signal，未发现该路径 abort；**静态不合格**，非仅未验。生产保持 fail closed，正确 POST 真机送达仍待复测 |
+| core / tools | 已有 client、runner、context、schema、settings、分块 session / storage 与 registry / calculator / exec 预设；0.3.0 增加声明式自造工具、工具识别、工作区文件/执行工具与动态 registry；通过注入接 adapter | 真实 endpoint 的生产安全通道、全量真机 LLM 闭环仍未通过；工作区与开发模式工具环已有 Y02 窄范围证据 |
+| 设置 / IME | 设置页已有密钥遮罩、明文保存确认 / 清除入口与文件工具开关；input 有 UUID / on-off / close 和 hide 守卫 | 系统 IME 遮罩、取消 / close / 前后台、持久化实际落盘已验 |
+| composition / net | 既有集成记录：composition 接 core；net 对象 data / 单次 POST / UTF-8 / 未知 status=null / 日志约束有宿主合同测试覆盖；0.3.0 增加仅开发模式的 curl 传输 | flat 二进制关闭 peer/host 校验、自动 redirect、不回传 HTTP status、无 caller timeout/signal，未发现该路径 abort；**静态不合格**，非仅未验。生产保持 fail closed；curl 传输不是生产 adapter |
 
 源码表不代替设备证据。历史记录中的“待创建 / 固定 936 token”不再描述当前源码。R06/R07 后的页面、ledger、排队取消及 transition/send 竞态已在 R08 修复并限定复核关闭：旧 5 项 + Node 93 项、Python 策略 22 项通过，debug/production 预览包已重建及只读校验。真实 core+UI 的持久、重启防重放、取消回归属于宿主证据；设备与安全 adapter 出口仍未关闭。最终 SHA 和证据见 VALIDATION。
 
@@ -98,6 +98,8 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 - M4 execShell schema 仅 `{commandId, params}`；初始候选 `head_probe`、`system_arch`、`device_time`，各自固定 executable/argv 与字段约束。禁止自由 shell、通用 cat / busybox、任意 echo、路径读写、pipe/redirection/命令替换、curl POST / 媒体 GET / -k。
 - 参数先语义校验（URL scheme/host/控制字符、枚举、范围），再逐项 argv 或正确 POSIX 引用；用户 / 模型不可选 flags、命令模板、输出路径、headers。开关默认关闭，执行时重查。
 - UI 展示受控操作、脱敏参数 / 命令和状态。execShell 当前仅有 bool / 状态线索，不能伪造 stdout；同步阻塞 / 无可靠期限取消的预设不得启用。
+- 0.3.0 新增 `define_tool` / `delete_tool` / `list_tools`：模型只能提交 lookup/compute/template/text/convert 声明式 recipe，不能提交代码；recipe 持久化在 `pa.customTools`，上限 8 个 / 单条 2 KiB，损坏显式失败。工具识别为有界确定性排序（名称/关键字/描述/中文二元组），不改权限。
+- 0.3.0 新增 `file_list/file_read/file_write/file_delete/file_exec`：路径只能是 app 私有工作区相对路径；写入经 POSIX 引用 shell + fs 校验；执行由 `/bin/timeout` 硬限时、输出限幅，`file_exec` 默认关闭。真机 Y02 已用运行自检与开发模式 AI 文件测试验证（见 VALIDATION / WORKSPACE_TOOLS）。
 
 ### 2.4 配置、凭据与存储
 
@@ -115,6 +117,16 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 
 触控热区两个轴至少 18vh。系统 startTextEdit 复用 Global、校验 UUID、仅 editConfirmed 真值写回，on/off 成对、完成 close；输入法引发 onHide 用会话守卫，真正 unload 不跳过清理。确认路径窄范围通过，取消 / close / 前后台仍待真机验证。两种以上分辨率 / 比例做布局取证，每个声明支持的真机 profile 独立验证；不能以 Y02 一张截图宣称多分辨率兼容。
 
+### 2.6 0.3.0 自造工具、工具识别与工作区执行
+
+用户 2026-10-31 继续要求：让 harness 能自己创造/识别工具，并至少让 AI 能编辑、删除、执行文件。实现与证据：
+
+- 自造工具：声明式 recipe（见 §2.3 与 `docs/CUSTOM_TOOLS.md`），元工具定义/删除/识别，`pa.customTools` 持久化；无 eval / 自由代码。
+- 工作区：`$workspace` 推导私有根，五个 file_* 工具，路径穿越拒绝，写回经 shell + fs 校验，执行经 `/bin/timeout`；`file_exec` 默认关闭。详见 `docs/WORKSPACE_TOOLS.md`。
+- 开发模式真实网络：`services/net/dev.js` 仅在 developmentMode + 回环/私网 + 合成 key 时用设备 curl 获得真实 HTTP status；含 -m 与 /bin/timeout、响应上限、临时文件清理，不记录 body/header/key。生产路径仍 fail closed，不能被该开发通道解锁。
+- 真机证据（Y02 / 4.9.7 / ADB）：工作区自检 ok=true（9 步）；开发模式 AI 测试由 LAN 合成 mock 驱动 3 次模型请求 / 5 次工具调用，最终 keep.txt 留存、ai.txt 删除，状态 completed。证据见 `docs/evidence/workspace-device-0.3.0.txt` 与 `docs/WORKSPACE_TOOLS.md`。
+- 未通过：真实 endpoint 生产对话、生产安全 adapter、TLS/redirect/status 的生产级验收；native `.so` 仍依赖 GitHub Actions 的获批 toolchain/sysroot bundle，本轮无设备 `.so`。
+
 ## 3. 里程碑与出口
 
 | 里程碑 | 内容 | 出口判据与当前状态 |
@@ -125,6 +137,7 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | M2 LLM 通道与 chat | client、收发状态、单次 POST、TLS、取消、日志清理、UTF-8 / 超时限额 | mock 与真实 endpoint 各完成一次主动对话；各失败仅一次发送；断网/取消/迟到回调、TLS fail 测试；无真实 key/payload 日志 |
 | M3 五工具与有限循环 | registry、五类工具、JSON schema/IDs、原子组裁剪、预算、tool-call UI | 纯逻辑测试含坏参数 / 重复ID / 禁用工具 / 上限 / 取消 / 整组裁剪；真机工具调用，多个结果准确关联；calculator 禁 eval |
 | M4 execShell + 历史持久化 | 预设只读执行器、关闭开关、审计；会话列表、分块历史、可靠串行保存 | 注入拒绝与正确 quoting、关闭/允许用例；不伪造 stdout / 取消；重启读回、断写恢复、连续保存不乱序；两次进出无累积 |
+| M6 自造工具 / 识别 / 工作区文件执行（0.3.0 新增） | recipe 元工具、pa.customTools、动态 registry、工具识别、file_* 工具、工作区适配器、设置开关、开发模式 curl 传输、工具/工作区页面 | 0.3.0 宿主 121/121 + legacy 5/5 + Python 22/22；Y02 真机安装、自检 9 步 ok、开发模式 AI 文件测试 completed（keep.txt 留存 / ai.txt 删除）；真实 endpoint 与生产安全 network adapter 仍未通过 |
 | M5 验收交付 | STANDARDS §13 完整矩阵、版本递增、AMR / 可选 `.so` SHA、逐步日志与限制说明 | 声明支持的功能/profile 对应证据齐全；未测能力明确标注，不把 mock 当真机。GitHub 发布仅在具体仓库授权内执行 |
 
 M1 的纯展示 / mock 与 M0 待办可并行；M2 生产真机 LLM 依赖 M0.5 安全通道完整通过，flat JSON POST 即使送达也不解锁。M3 纯逻辑可先用 mock，真机闭环依赖 M2。M4 依赖 M1 存储边界和 M3 参数 / 权限；M5 不能跳过 R06→R07 修复的 R08 最终集成回归及任何未关闭门槛。

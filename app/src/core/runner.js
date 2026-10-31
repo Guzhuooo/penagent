@@ -5,7 +5,7 @@ import { validateHistory, validateToolBatch } from './context.js';
 import { parseArguments } from './schema.js';
 import { truncateUtf8 } from './utf8.js';
 import { validateToolArguments } from '../tools/registry.js';
-import { createOpenAIClient } from './client.js';
+import { createOpenAIClient, resolveRegistry } from './client.js';
 export function createRunner(adapters, registry, notes, currentPolicy) {
   let generation = 0;
   let active = null;
@@ -160,10 +160,14 @@ export function createRunner(adapters, registry, notes, currentPolicy) {
       for (;;) {
         check();
         if (owner.modelRequests >= LIMITS.modelRequests || owner.toolCalls >= LIMITS.tools) fail('LIMIT_REACHED');
+        // Snapshot either the fixed array or the dynamic registry for this
+        // iteration only; tools defined during this run surface next round.
+        const iterationTools = await resolveRegistry(registry);
+        check();
         owner.modelRequests += 1;
         state.modelRequests = owner.modelRequests;
         event('request', { count: owner.modelRequests });
-        const message = await client.complete(history, settings, scope);
+        const message = await client.complete(history, settings, scope, iterationTools);
         check();
         if (!message.tool_calls) {
           history.push(message);
@@ -175,7 +179,7 @@ export function createRunner(adapters, registry, notes, currentPolicy) {
         if (owner.toolCalls + calls.length > LIMITS.tools || Object.keys(seen).length + calls.length > LIMITS.toolAuditIds) fail('LIMIT_REACHED');
         // Validate ALL envelopes, IDs, schemas and business arguments before the first side effect.
         const prepared = calls.map(function (call) {
-          const tool = registry.filter(function (entry) { return entry.name === call.function.name; })[0];
+          const tool = iterationTools.filter(function (entry) { return entry.name === call.function.name; })[0];
           let args;
           let error;
           try {
@@ -243,6 +247,7 @@ export function createRunner(adapters, registry, notes, currentPolicy) {
                 }
               },
               notes: notes, deviceInfo: adapters.deviceInfo, execPreset: adapters.execPreset, headProbe: adapters.headProbe,
+              workspace: adapters.workspace, customTools: adapters.customTools, tools: iterationTools,
               allowedProbeHosts: policy.allowedProbeHosts.slice()
             };
             content = await scope.wait(function () { toolCheck(); return item.tool.execute(item.args, ctx); }, LIMITS.toolMs, 'NET_TIMEOUT');

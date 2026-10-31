@@ -1,7 +1,7 @@
 <template>
   <div class="rail">
     <text class="brand">笔上 Agent</text>
-    <div class="action" @click="$emit('new')"><text class="action-label">＋ 新会话</text></div>
+    <div class="action" @click="$emit('new')"><image class="action-icon" :src="newIcon" mode="aspectFit"></image><text class="action-label">新建会话</text></div>
     <scroller class="sessions" scroll-direction="vertical">
       <div v-for="session in sessions" :key="session.id" class="session" :class="session.id === selectedId ? 'selected' : 'unselected'" @click="$emit('select', session.id)">
         <text class="session-title">{{ session.title || '新会话' }}</text>
@@ -12,9 +12,11 @@
   </div>
 </template>
 <script>
+import { icon } from '../assets/icons.js';
 export default {
   name: 'SessionRail',
   props: { sessions: { type: Array, default: () => [] }, selectedId: { type: String, default: '' } },
+  computed: { newIcon() { return icon('plus'); } },
 };
 </script>
 <style lang="less" scoped>
@@ -23,6 +25,7 @@ export default {
 .brand { width: @rail-inner; height: 18vh; margin-left: @rail-inset; font-size: @font-md; color: @accent; lines: 1; }
 .action { width: @rail-inner; height: 18vh; margin-left: @rail-inset; flex-direction: row; align-items: center; justify-content: center; background-color: @bg-muted; border-radius: @radius-sm; }
 .action-label { font-size: @font-sm; color: @text-primary; lines: 1; }
+.action-icon { width: 2.4vw; height: 8vh; margin-right: 1vw; }
 .sessions { width: @sidebar-w; height: 44vh; margin-top: 1vh; margin-bottom: 1vh; flex-direction: column; }
 .session { width: @rail-inner; min-height: 18vh; margin-left: @rail-inset; margin-bottom: 1vh; flex-direction: row; align-items: center; border-radius: @radius-sm; }
 .selected { background-color: @brand; }

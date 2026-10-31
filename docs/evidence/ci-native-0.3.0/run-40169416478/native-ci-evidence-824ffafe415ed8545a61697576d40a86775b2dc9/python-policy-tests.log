@@ -1,0 +1,27 @@
+test_exact_supplied_exports_allow_fixture_only (test_native_ci.AuditTests.test_exact_supplied_exports_allow_fixture_only) ... ok
+test_export_from_non_needed_library_does_not_satisfy_import (test_native_ci.AuditTests.test_export_from_non_needed_library_does_not_satisfy_import) ... ok
+test_falcon_allowlist_must_exist_in_exact_provider (test_native_ci.AuditTests.test_falcon_allowlist_must_exist_in_exact_provider) ... ok
+test_glibc_glibcxx_weak_and_falcon_no_blanket_exemptions (test_native_ci.AuditTests.test_glibc_glibcxx_weak_and_falcon_no_blanket_exemptions) ... ok
+test_needed_library_interpreter_and_search_paths_rejected (test_native_ci.AuditTests.test_needed_library_interpreter_and_search_paths_rejected) ... ok
+test_digest_or_manifest_approval_mismatch (test_native_ci.PolicyTests.test_digest_or_manifest_approval_mismatch) ... ok
+test_disabled_policy_fails_closed (test_native_ci.PolicyTests.test_disabled_policy_fails_closed) ... ok
+test_explicit_approved_fixture (test_native_ci.PolicyTests.test_explicit_approved_fixture) ... ok
+test_missing_or_overbroad_scopes_fail (test_native_ci.PolicyTests.test_missing_or_overbroad_scopes_fail) ... ok
+test_missing_repo_or_approval_fails (test_native_ci.PolicyTests.test_missing_repo_or_approval_fails) ... ok
+test_non_ci_build_is_denied_before_any_tool (test_native_ci.PolicyTests.test_non_ci_build_is_denied_before_any_tool) ... ok
+test_repository_visibility_and_ref_must_match (test_native_ci.PolicyTests.test_repository_visibility_and_ref_must_match) ... ok
+test_sources_outside_scope_fail (test_native_ci.PolicyTests.test_sources_outside_scope_fail) ... ok
+test_credentials_queries_redirects_mutable_paths_and_wrong_sha_rejected (test_native_ci.SourceTests.test_credentials_queries_redirects_mutable_paths_and_wrong_sha_rejected) ... ok
+test_download_rejects_redirect_sha_mismatch_and_size (test_native_ci.SourceTests.test_download_rejects_redirect_sha_mismatch_and_size) ... ok
+test_duplicate_json_key_rejected (test_native_ci.SourceTests.test_duplicate_json_key_rejected) ... ok
+test_private_dns_is_rejected (test_native_ci.SourceTests.test_private_dns_is_rejected) ... ok
+test_tar_path_link_special_duplicate_and_bomb_rejected (test_native_ci.SourceTests.test_tar_path_link_special_duplicate_and_bomb_rejected) ... ok
+test_tar_safely_extracted_and_modes_sanitized (test_native_ci.SourceTests.test_tar_safely_extracted_and_modes_sanitized) ... ok
+test_tool_output_is_not_logged_on_failure (test_native_ci.SourceTests.test_tool_output_is_not_logged_on_failure) ... ok
+test_cmake_guard_precedes_project_and_no_blanket_import_waivers (test_native_ci.StaticWorkflowTests.test_cmake_guard_precedes_project_and_no_blanket_import_waivers) ... ok
+test_only_manual_trigger_and_actions_full_sha (test_native_ci.StaticWorkflowTests.test_only_manual_trigger_and_actions_full_sha) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.045s
+
+OK

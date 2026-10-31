@@ -1,4 +1,4 @@
-const ROUTES = { chat: 'index', settings: 'settings', probe: 'probe' };
+const ROUTES = { chat: 'index', settings: 'settings', probe: 'probe', tools: 'tools', workspace: 'workspace' };
 
 export function navigate(route) {
   const target = ROUTES[route];
@@ -13,4 +13,14 @@ export function navigate(route) {
 export function leaveSettings() {
   if (typeof $falcon.closePageByName === 'function') $falcon.closePageByName('settings');
   else navigate('chat');
+}
+
+export function leaveTools() {
+  if (typeof $falcon.closePageByName === 'function') $falcon.closePageByName('tools');
+  else navigate('chat');
+}
+
+export function leaveWorkspace() {
+  if (typeof $falcon.closePageByName === 'function') $falcon.closePageByName('workspace');
+  else navigate('tools');
 }

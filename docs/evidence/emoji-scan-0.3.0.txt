@@ -1,0 +1,215 @@
+penagent / task-1 evidence: UI emoji + glyph-only status symbol removal, inline PNG icons, regression guard
+version: 0.3.0   captured: 2026-10-25 (Asia/Shanghai)
+owner: ui-emoji   host: Windows, D:\penagent
+
+SCOPE
+  app/src/** (all files incl. .vue/.js/.less/.md), app/test/**, docs/**,
+  D:\penagent\DEVICE_PROBING.md, D:\penagent\DEVICE_PROFILE.md
+  codepoint ranges treated as forbidden glyphs:
+    U+1F000-U+1FAFF (emoji blocks), U+2600-U+27BF (misc symbols/dingbats),
+    U+2B00-U+2BFF, U+FE0F (variation selector), U+FF0B (fullwidth plus)
+  (U+2611/U+2610/U+2705/U+274C/U+26A0/U+26D4 fall inside U+2600-U+27BF.)
+
+BEFORE SCAN OUTPUT (inventory)
+  app/src/components/session-rail.vue :: U+FF0B (count 1)
+  app/src/pages/settings/settings.vue :: U+2611 U+2610 (count 6)
+  app/test/core.test.mjs :: U+1F600 (count 3)
+  app/test/net.test.mjs :: U+1F642 (count 4)
+  app/test/storage.test.mjs :: U+1F642 (count 2)
+  docs/PROGRESS.md :: U+2705 U+274C (count 10)
+  DEVICE_PROBING.md :: U+2705 U+274C U+26A0 U+FE0F U+26D4 (count 18)
+  DEVICE_PROFILE.md :: U+26A0 U+FE0F U+2705 (count 7)
+
+AFTER SCAN OUTPUT (same script, same scope)
+  files scanned: 81, files with emoji/status glyphs: 0
+
+RESIDUAL NON-EMOJI GLYPHS DELIBERATELY KEPT (not emoji; standard punctuation)
+  U+2026 ...  (ellipsis in UI copy), U+2022 bullet (API-key mask), U+2013 en dash,
+  U+2014 em dash, U+2192 rightwards arrow (comments/docs only),
+  U+3001 U+3002 U+FF08 U+FF09 U+FF0C U+FF1A U+FF1B (CJK punctuation).
+  These are not emoji, keep their own font coverage, and are outside the
+  forbidden ranges above; arrows are explicitly not treated as emoji.
+
+REPLACEMENTS APPLIED
+  app/src/pages/settings/settings.vue : U+2611/U+2610 checkbox interpolation ->
+    <image class="toggle-icon" :src="persistIcon|execIcon|toolIcons[id]"
+    mode="aspectFit"></image> + <text class="toggle-state">已开启/已关闭</text>
+    computed helpers persistIcon / execIcon / toolIcons; .toggle-icon 2.4vw x 8vh
+    (Y02 square-equivalent: 2.4vw=22.5px, 8vh=22.4px), .toggle-state 9vw,
+    .choice-label 64vw -> 48vw so icon+label+state stay inside @message-inner 68vw.
+  app/src/components/session-rail.vue : U+FF0B "＋ 新会话" -> plus icon image
+    (class .action-icon 2.4vw x 8vh) + text "新建会话"; action size unchanged.
+  app/test/core.test.mjs : U+1F600 -> U+1D11E (4-byte UTF-8, 2 UTF-16 units)
+  app/test/net.test.mjs / app/test/storage.test.mjs : U+1F642 -> U+10348 (same 4-byte/2-unit shape)
+  docs/PROGRESS.md        : 10 glyphs -> [通过]/[失败]/[注意]/[禁止], 4 lines changed, line count 113 kept
+  DEVICE_PROBING.md       : 16 glyph replacements, 14 lines changed, line count 141 kept
+  DEVICE_PROFILE.md       : 5 glyph replacements, 5 lines changed, line count 267 kept
+
+ICONS MODULE EVIDENCE
+  path: app/src/assets/icons.js
+  sha256: b03255551462f892479f01e8e0c64bf5b8186a0cedcbd67edd5198fc128a9b5c
+  bytes: 1747 (whole file)   ascii-only: true
+  entries (48x48 RGBA PNG):
+    check-on  uri_chars=442  png_bytes=315
+    check-off uri_chars=330  png_bytes=229
+    plus      uri_chars=246  png_bytes=166
+  design colours: @brand #588bd8, @text-secondary #8d99a6, @text-primary #e9eef4
+  inline-not-loose reason: on this Falcon/QuickJS toolchain only package.json
+  icon.png is copied into the package; loose src/assets images do not enter the
+  package (proven on the sibling pendouyin project, same toolchain). Each data
+  URI stays well under the 2 KiB budget.
+
+ICON GENERATION (bundled Python 3 + Pillow 12.3.0, see appendix for full script)
+  python.exe gen_icons.py
+  wrote D:/penagent/app/src/assets/icons.js bytes 1747
+  check-on png_bytes=315 uri_chars=442
+  check-off png_bytes=229 uri_chars=330
+  plus png_bytes=166 uri_chars=246
+  preview saved (48x48 NEAREST zoom + 22px device-size sample on #1f2630)
+
+REGRESSION GUARD (app/test/source-contract.test.mjs, 4 new tests)
+  - app source contains no emoji or glyph-only status symbols (scans all app/src)
+  - icon module is ASCII-only and every icon is a small 48x48 PNG data URI
+    (asserts PNG signature + IHDR 48x48 + URI < 2 KiB + required names)
+  - templated images bind an inlined src and declare vw/vh width and height in one class
+    (every <image> explicitly closed, one class, class rule has width+height, no loose asset path)
+  - icon data URIs are referenced through the module, never duplicated in templates
+
+TEST EVIDENCE (command: npm --prefix app test, cwd D:\penagent)
+  legacy runner: ALL 5 TESTS PASSED
+  node --test:  # tests 97  # pass 97  # fail 0
+  (baseline was 5/5 + 93/93; +4 new source-contract guard tests = 97)
+
+FINAL VERIFICATION RUN (rerun after concurrent teammate edits settled)
+  <pending final run appended below>
+
+APPENDIX: gen_icons.py (reproducible; requires Pillow)
+----8<----
+"""Generate tiny 48x48 flat PNG icons for the penagent mini-app and inline them
+into app/src/assets/icons.js as base64 data URIs.
+
+Why inline: on the Falcon/QuickJS toolchain only package.json icon.png is copied
+into the package; loose files under src/assets/ are not packaged, so images must
+travel as data URIs. Device fonts cannot render emoji glyphs.
+
+Flat geometry only: drawn on a 4x supersample grid (192x192), LANCZOS down to
+48x48, then snapped to the design palette + 1-bit alpha so each PNG stays far
+below the 2 KiB data URI budget.
+Run with the bundled Python + Pillow.
+"""
+import base64
+import io
+import os
+
+from PIL import Image, ImageDraw
+
+S = 192  # 48 * 4 supersample grid; all shape coordinates below are in this space
+BRAND = (0x58, 0x8B, 0xD8, 255)       # styles/var.less @brand
+SECONDARY = (0x8D, 0x99, 0xA6, 255)   # styles/var.less @text-secondary
+PRIMARY = (0xE9, 0xEE, 0xF4, 255)     # styles/var.less @text-primary
+
+
+def finalize(image, palette, cut=96):
+    """Supersample -> 48x48 -> nearest palette colour + 1-bit alpha."""
+    image = image.resize((48, 48), Image.LANCZOS)
+    pixels = image.load()
+    for y in range(48):
+        for x in range(48):
+            r, g, b, a = pixels[x, y]
+            if a < cut:
+                pixels[x, y] = (0, 0, 0, 0)
+                continue
+            best = min(palette, key=lambda c: (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2)
+            pixels[x, y] = (best[0], best[1], best[2], 255)
+    return image
+
+
+def check_on():
+    image = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((16, 16, 176, 176), radius=36, fill=BRAND)
+    draw.line([(52, 96), (80, 124), (136, 64)], fill=PRIMARY, width=20, joint='curve')
+    return finalize(image, [BRAND, PRIMARY])
+
+
+def check_off():
+    image = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((16, 16, 176, 176), radius=36, outline=SECONDARY, width=14)
+    return finalize(image, [SECONDARY])
+
+
+def plus():
+    image = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((44, 88, 148, 104), radius=8, fill=BRAND)
+    draw.rounded_rectangle((88, 44, 104, 148), radius=8, fill=BRAND)
+    return finalize(image, [BRAND])
+
+
+ICONS = [('check-on', check_on), ('check-off', check_off), ('plus', plus)]
+OUT = os.path.join('D:/penagent/app/src/assets/icons.js')
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
+
+lines = [
+    '// ASCII-only PNG icons inlined as data URIs.',
+    '//',
+    '// Why inline: the Falcon/QuickJS packer only copies package.json icon.png,',
+    '// so loose images under src/assets/ never reach the package. Inline PNGs are',
+    '// referenced from templates via <image :src="icon(name)" mode="aspectFit">',
+    '// with explicit vw/vh class geometry. Device fonts cannot render emoji.',
+    '// Generated by Pillow at 48x48 (4x supersampled, LANCZOS, palette + 1-bit',
+    '// alpha); do not hand edit.',
+    'export const ICONS = {',
+]
+report = []
+for name, fn in ICONS:
+    image = fn()
+    buffer = io.BytesIO()
+    image.save(buffer, format='PNG', optimize=True)
+    payload = buffer.getvalue()
+    uri = 'data:image/png;base64,' + base64.b64encode(payload).decode('ascii')
+    assert payload[:8] == b'\x89PNG\r\n\x1a\n', name
+    assert len(uri) < 2048, (name, len(uri))
+    lines.append("  '" + name + "': '" + uri + "',")
+    report.append((name, len(payload), len(uri)))
+lines += [
+    '};',
+    '',
+    '// Return the data URI, or empty string when the name is unknown so callers',
+    '// can fall back to text instead of crashing.',
+    'export function icon(name) {',
+    "  return ICONS[String(name || '')] || '';",
+    '}',
+]
+text = '\n'.join(lines) + '\n'
+assert all(ord(ch) < 128 for ch in text), 'icons.js must stay ASCII-only'
+with open(OUT, 'w', encoding='ascii', newline='\n') as handle:
+    handle.write(text)
+print('wrote', OUT, 'bytes', len(text))
+for name, raw, uri in report:
+    print(name, 'png_bytes=' + str(raw), 'uri_chars=' + str(uri))
+
+# Visual preview: 6x nearest + device-size 22px sample, on @bg-muted.
+preview = Image.new('RGBA', (360, 210), (0x1F, 0x26, 0x30, 255))
+x = 16
+for name, fn in ICONS:
+    icon = fn()
+    preview.alpha_composite(icon.resize((96, 96), Image.NEAREST), (x, 16))
+    preview.alpha_composite(icon.resize((22, 22), Image.LANCZOS), (x + 32, 140))
+    x += 112
+preview.save(os.path.join(os.environ['TEMP'], 'penagent-icons', 'preview.png'))
+print('preview saved')
+----8<----
+
+FINAL 0.3.0 SOURCE SCAN (2026-10-31, after custom-tools/workspace work)
+
+  node scan over app/src + app/test with ranges
+  U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF, U+FE0F, U+FF0B:
+    app/src/core/README.md        U+2192 (plain arrow in prose; not emoji/status glyph, kept)
+    app/src/services/net/error.js U+2192 (comment arrow; kept)
+    app/test/custom-tools.test.mjs -> U+1F600 replaced with U+1D11E (4-byte non-emoji fixture)
+  Re-run after replacement: no emoji codepoints in app/src; source-contract test enforces it.
+  App UI screenshots: settings-file-tools.png (PNG check icons + 已开启/已关闭 text),
+  chat.png (新建会话 text + inline plus icon, no ＋ glyph).
+  js-tests-0.3.0.txt: 124/124 node + 5/5 legacy pass (includes source-contract guard).

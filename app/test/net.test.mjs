@@ -5,7 +5,7 @@ import { requestJson, probeRequest, normalizeBody, networkCapabilities } from '.
 const options = () => ({
   url: 'http://127.0.0.1:8787/v1/echo', method: 'POST', developmentMode: true,
   headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-synthetic-key' },
-  body: JSON.stringify({ ping: '中文🙂' }), timeout: 100,
+  body: JSON.stringify({ ping: '中文𐍈' }), timeout: 100,
 });
 function api(fn) { globalThis.$falcon = { jsapi: { 'http.request': fn } }; }
 function cancellation() {
@@ -24,14 +24,14 @@ test('POST uses flat JSON envelope, singular header and object data exactly once
     calls++;
     const payload = JSON.parse(text);
     assert.equal(payload.method, 'POST');
-    assert.deepEqual(payload.data, { ping: '中文🙂' });
+    assert.deepEqual(payload.data, { ping: '中文𐍈' });
     assert.equal(payload.header.Authorization, 'Bearer test-synthetic-key');
     assert.equal(payload.header['Accept-Encoding'], 'identity');
     assert.equal(payload.body, undefined); assert.equal(payload.headers, undefined);
     assert.equal(payload.url, options().url);
-    cb({ statusCode: 201, result: '{"message":"中文回答🙂"}' });
+    cb({ statusCode: 201, result: '{"message":"中文回答𐍈"}' });
   });
-  assert.deepEqual(await requestJson(options()), { status: 201, data: { message: '中文回答🙂' } });
+  assert.deepEqual(await requestJson(options()), { status: 201, data: { message: '中文回答𐍈' } });
   assert.equal(calls, 1);
 });
 

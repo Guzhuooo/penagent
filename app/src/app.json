@@ -2,7 +2,9 @@
   "pages": {
     "index": "pages/index/index.js",
     "settings": "pages/settings/settings.js",
-    "probe": "pages/probe/probe.js"
+    "probe": "pages/probe/probe.js",
+    "tools": "pages/tools/tools.js",
+    "workspace": "pages/workspace/workspace.js"
   },
   "options": {
     "style": {

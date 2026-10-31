@@ -3,16 +3,29 @@ import { fail } from './errors.js';
 import { createStorage } from './storage.js';
 import { createSession, createSessionStore } from './session.js';
 import { createToolRegistry } from '../tools/registry.js';
+import { createCustomToolStore, rankTools, toolCatalog } from '../tools/custom.js';
 import { createRunner } from './runner.js';
 export function createHarness(adapters) {
   const injected = adapters || {};
   const storage = createStorage(injected.getJson, injected.setJson);
   const sessions = createSessionStore(storage);
+  const custom = createCustomToolStore(storage);
   let settings = normalizeSettings();
   let settingsRevision = 0;
   let settingsDirty = false;
   const missingSettings = {};
-  const runner = createRunner(injected, createToolRegistry(), storage, function () { return settings; });
+  // Dynamic registry: re-resolved on every model iteration so a tool defined
+  // during this run is advertised in the next request. Persisted recipes are
+  // read only after an explicit loadCustomTools() preload: the UI page loads
+  // them before sending, while a bare API runner never adds a hidden storage
+  // read before the first model request (which would change cancel ordering).
+  function currentRegistry() {
+    if (custom.state.loaded) {
+      return custom.ensureLoaded().then(function () { return createToolRegistry(custom.records()); });
+    }
+    return Promise.resolve(createToolRegistry(custom.records()));
+  }
+  const runner = createRunner(Object.assign({}, injected, { customTools: custom }), currentRegistry, storage, function () { return settings; });
   return {
     state: runner.state,
     storageState: storage.state,
@@ -46,6 +59,19 @@ export function createHarness(adapters) {
     loadSessions: sessions.loadSessions,
     saveSession: sessions.saveSession,
     createSession: createSession,
+    // Cached custom-tool snapshot (empty before the first load).
+    customTools: function () { return custom.list(); },
+    loadCustomTools: function () { return custom.ensureLoaded().then(function () { return custom.list(); }); },
+    createCustomTool: function (input) { return custom.ensureLoaded().then(function () { return custom.create(input); }); },
+    deleteCustomTool: function (name) { return custom.ensureLoaded().then(function () { return custom.remove(name); }); },
+    listTools: function () {
+      return custom.ensureLoaded().then(function () { return toolCatalog(createToolRegistry(custom.records())); });
+    },
+    findTools: function (query) {
+      return custom.ensureLoaded().then(function () {
+        return rankTools(toolCatalog(createToolRegistry(custom.records())), query, 5);
+      });
+    },
     run: function (messages, input, options) {
       if (input != null) { settings = normalizeSettings(input); settingsRevision += 1; }
       return runner.run(messages, settings, options);

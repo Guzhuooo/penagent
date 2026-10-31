@@ -1,0 +1,78 @@
+Falcon fs / process capability probe (Y02 firmware 4.9.7, 2026-10-31)
+Profile: Y02-3562, appid 8002026100700001, runtime QuickJS 20200705
+Method: temporary diagnostic page `pages/fsprobe` built with aiot-cli, installed via
+`miniapp_cli install`, started with `miniapp_cli start 8002026100700001 fsprobe`.
+Lines below are the device console.warn lines captured from
+`/userdata/applog/DictPen_*.log` (tag `[pa:fsprobe]`). The temporary page was removed
+from the release before the final package; this file is the preserved observation.
+
+import('fs') is available on this firmware. Module export shape: `mod.default || mod`.
+Methods present: readFile, readdir, stat, exists, mkdir, rm, statfs.
+Methods absent: open, write, rename (therefore no direct fs write channel).
+
+    appid=8002026100700001 workspace=/userdisk/secondary/miniapp/data/mini_app/pkg/8002026100700001/a/
+    fs import ok object keys=
+    fs methods=readFile:function readdir:function stat:function exists:function mkdir:function rm:function open:undefined write:undefined rename:undefined statfs:functio
+    readFile cfg string:{
+    exists cfg=true no=false
+    stat cfg=object keys=atimeMs,birthtimeMs,blksize,blocks,ctimeMs,dev,gid,ino,mode,mtimeMs,nlink,rdev
+    readdir tmp=object keys=0,1,2,3,4,5,6,7,8,9,10,11 n=50
+    mkdir ok exists=true
+    rm absent=boolean:true
+    write path E not a function
+    path keys=
+    path.join=/tmp/a/../b
+    miniapp keys=
+    execShell result=boolean:true ms=3
+    shell readback=pa-shell-ok
+    process import ok object keys=
+    process methods=
+    exec command ok object keys=code,signal,stderr,stdout ms=48
+      stdout= stderr=JSProcess::exec echo probe-one: No such  exit=undefined
+    exec file args ok object keys=code,signal,stderr,stdout ms=51
+      stdout=probe-two
+    exec command opts ok object keys=code,signal,stderr,stdout ms=49
+      stdout= stderr=JSProcess::exec echo probe-three: No suc exit=undefined
+    exec sh args opts ok object keys=code,signal,stderr,stdout ms=50
+      stdout=probe-four
+    exec timeout ok object keys=code,signal,stderr,stdout ms=3235
+
+Write channel, workspace root, stat/rm semantics, process.exec result shape and cwd:
+
+    workspace mkdir code=0 err= root=/userdisk/secondary/miniapp/data/mini_app/pkg/8002026100700001/data/pa-probe-workspace/
+    shell write code=0 exists=true
+    workspace readback=hello-edited
+    chmod code=0
+    stat file mode=33152 isFile=undefined isDir=undefined
+    rm file=boolean:true exists=false
+    mkdir sub code=0
+    readdir ws n=1 first=string:sub type=string
+    rm dir=boolean:true
+    exec exit code=3 signal=null out=out
+    exec cwd=/userdisk/secondary/miniapp/data/mini_app/pkg/8002026100700001/data/pa-probe-workspace
+    timeout bin=/bin/timeout
+    timeout2 code=null signal=9 ms=1023
+    probe done
+
+Conclusions used by the implementation:
+
+- `import('fs')` and `import('process')` work in QuickJS; the `process` module exposes
+  Promise `exec(file, args, options)` returning `{code, signal, stdout, stderr}`.
+  It is execFile-like: the first argument is an executable path, not a shell line.
+- There is no fs write API on this firmware. Writing is done by running
+  `/bin/sh -c "printf '%s' <quoted content> > <quoted path>"` through
+  `process.exec` (async, with stdout/stderr/exit code) and then verifying with `fs`.
+  `Global.execShell` (synchronous boolean, ~3 ms) remains as a fallback when the
+  process module is unavailable; fs read-back is the durability check in both cases.
+- `$workspace` is the app slot directory (`.../pkg/<appid>/<slot>/`). The workspace
+  root is derived as `<appid dir>/data/penagent-workspace`, which survives slot
+  replacement on update. `/userdata/...` is writable by the runtime and shell.
+- `fs.readdir` returns an array of file-name strings; `fs.stat` returns a `mode`
+  whose file type bits distinguish 0o040000 (dir) and 0o100000 (file); `fs.rm`
+  removes files and empty directories; `fs.readFile` returns the text as a string
+  (wrapped as `{result}` in some paths and unwrapped in others, hence normalization).
+- `/bin/timeout` exists (busybox), so every command/file execution is wrapped with
+  a hard wall-clock bound. `process.exec`'s own `timeout` option was observed to be
+  coarse (killed after ~1 s for a 300 ms value), which is why the shell-level
+  `/bin/timeout` wrapper is used for the product path.
+- No `.so`, no native JSAPI and no C/C++ build is involved in this capability.

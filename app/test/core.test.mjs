@@ -28,8 +28,8 @@ function deferred() { let resolve; let reject; const promise = new Promise((a, b
 const code = expected => error => error.code === expected && !error.message.includes('SENSITIVE');
 
 test('UTF-8 counts multibyte, pairs and isolated surrogates without runtime encoding APIs', () => {
-  for (const text of ['', 'ASCII', '中文', 'a😀中', '\ud800', '\udc00', 'é']) assert.equal(utf8Bytes(text), Buffer.byteLength(text));
-  const shortened = truncateUtf8('😀中文'.repeat(1000), 4096);
+  for (const text of ['', 'ASCII', '中文', 'a𝄞中', '\ud800', '\udc00', 'é']) assert.equal(utf8Bytes(text), Buffer.byteLength(text));
+  const shortened = truncateUtf8('𝄞中文'.repeat(1000), 4096);
   assert.ok(utf8Bytes(shortened) <= 4096);
   assert.ok(shortened.endsWith('[truncated]'));
   assert.ok(!/[\ud800-\udbff]$/.test(shortened.slice(0, -12)));
@@ -279,7 +279,7 @@ test('response envelope unsupported content and finish reason rejected; UTF8 res
 
 test('tool result truncates by UTF8 and API key never enters execution context', async () => {
   const registry = createToolRegistry(); let count = 0; let context;
-  registry.find(tool => tool.name === 'clock').execute = async (_, ctx) => { context = ctx; return '中😀'.repeat(2000); };
+  registry.find(tool => tool.name === 'clock').execute = async (_, ctx) => { context = ctx; return '中𝄞'.repeat(2000); };
   const runner = createRunner({ requestJson: async () => ++count === 1 ? reply([call('big-result')]) : reply() }, registry, createStorage(memory().getJson, memory().setJson));
   const result = await runner.run(user(), configured({ apiKey: 'SENSITIVE' }));
   assert.equal(result.status, 'completed'); assert.ok(utf8Bytes(result.messages[2].content) <= 4096);

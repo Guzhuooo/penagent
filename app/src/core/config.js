@@ -1,6 +1,8 @@
 import { fail } from './errors.js';
 import { isObject } from './schema.js';
-export const TOOL_NAMES = Object.freeze(['clock', 'calculator', 'note', 'device_info', 'net_probe', 'execShell']);
+export const TOOL_NAMES = Object.freeze(['clock', 'calculator', 'note', 'device_info', 'net_probe', 'execShell',
+  'define_tool', 'delete_tool', 'list_tools',
+  'file_list', 'file_read', 'file_write', 'file_delete', 'file_exec']);
 export const DEFAULT_SETTINGS = Object.freeze({
   baseUrl: '', apiKey: '', model: '', temperature: 0.7,
   maxTokens: 1024, persistApiKey: false, execShellEnabled: false, developmentMode: false
@@ -47,7 +49,7 @@ export function normalizeSettings(input) {
   const switches = source.tools == null ? {} : source.tools;
   if (!isObject(switches)) fail('CONFIG_ERROR');
   Object.keys(switches).forEach(function (key) { if (TOOL_NAMES.indexOf(key) < 0 || typeof switches[key] !== 'boolean') fail('CONFIG_ERROR'); });
-  TOOL_NAMES.forEach(function (name) { settings.tools[name] = Object.prototype.hasOwnProperty.call(switches, name) ? switches[name] : name !== 'execShell'; });
+  TOOL_NAMES.forEach(function (name) { settings.tools[name] = Object.prototype.hasOwnProperty.call(switches, name) ? switches[name] : (name !== 'execShell' && name !== 'file_exec'); });
   const hosts = source.allowedProbeHosts == null ? [] : source.allowedProbeHosts;
   if (!Array.isArray(hosts) || hosts.length > 32) fail('CONFIG_ERROR');
   settings.allowedProbeHosts = hosts.map(function (host) {
@@ -63,7 +65,11 @@ export function completionEndpoint(settings) {
   return normalized.baseUrl + '/chat/completions';
 }
 export function toolEnabled(settings, name) {
-  return settings.tools[name] === true && (name !== 'execShell' || settings.execShellEnabled === true);
+  // Custom tools are not part of the persisted settings switch map; deleting a
+  // recipe is the disable path. Explicit false always disables.
+  if (settings.tools[name] === false) return false;
+  if (name === 'execShell') return settings.execShellEnabled === true && settings.tools.execShell === true;
+  return true;
 }
 export function allowedProbeUrl(url, hosts) {
   let parsed;

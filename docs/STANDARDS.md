@@ -72,6 +72,7 @@
 ## 3. Vue 2 / QuickJS 与 UI
 
 - 使用目标 Vue 2.6.12 / QuickJS 20200705 和已验证 Falcon CSS 子集；禁用浏览器 DOM、Node API、动态代码执行及未经验证的 Web API。宿主 Node 测试通过不等于 QuickJS 兼容。
+- UI 不依赖 emoji / 状态符号字体：状态图标使用内联 base64 PNG 或文字，禁止把 `☑ ☐ ✅ ❌ ⚠ ⛔ ＋` 等字形作为唯一状态表达；设备字体无法保证渲染。回归门槛见 source-contract 测试。
 - 文字放 `<text>`；图片明确 src 和 vw/vh 尺寸；scroller 明确 vw/vh 宽高及方向；flex-direction 显式声明。SFC 使用 scoped、单 class 选择器，状态 class 不改变控件几何。
 - 页面名与 `app.json` / 页面脚本一致，所有页面类继承 BasePage；根 Vue 的 `onShow/onHide/onUnload` 使用当前实际支持的 method 钩子，不假定 `$page.on('show')`。
 - 列表使用稳定业务 ID；分批渲染不丢弃持久化数据。模板只做展示，能力判断收口到 adapter。未经验证的 calc、media query、复杂选择器不得用于生产布局。
@@ -97,6 +98,7 @@
 - 初始预算：安全 adapter 单请求默认超时 20s；请求、响应分别不超过 2 MiB UTF-8；每 run 总预算见 §6。flat 固定 CONNECTTIMEOUT_MS=10000（连接 10s）与 TIMEOUT_MS=100000（总计 100s），未读取 caller timeout；JS 等待超时不是 native deadline / abort，旧“总计 10s”说法作废。预算是项目上限，设备承载能力仍须实测。能在读取阶段限制就提前停止；只能返回后检查的通道记录峰值风险。
 - 归一化 status、正文、transport / TLS / timeout / cancellation 错误；未知 HTTP 状态必须标 unknown/null，禁止伪造 200。flat 仅接受 200/201 而成功只返回 `{result:'response text'}`，无 HTTP status；错误 `{result:{errorMessage}}` 和 proxy error 3 均非 HTTP 状态，禁止 scrape/regex 错误文本或信任正文自报状态。正文类型和 UTF-8 正确处理，禁止用 ASCII 占比拒绝中文或用字符串 length 当字节数。
 - 使用稳定错误码（NET_TIMEOUT、NET_TRANSPORT、TLS_ERROR、HTTP_ERROR、PARSE_ERROR、CAPABILITY_UNAVAILABLE、LIMIT_REACHED、CANCELLED、STORAGE_ERROR），日志只记受控 metadata。不吞错误；预期取消可静默显示取消状态。
+- 开发模式（仅 `developmentMode:true` + 回环/私网 host + 合成 key）允许经 `services/net/dev.js` 用设备 curl 获取真实 HTTP status 与响应，必须同时具备 `-m` 与 `/bin/timeout` 限制、响应大小上限、临时文件清理，且绝不记录 URL query/body/header/key。该通道不是生产安全 adapter，不得据此解锁真实 endpoint；生产/非合成流量仍走 fail-closed 路径。
 
 ## 6. OpenAI 协议与有限工具循环
 
@@ -145,6 +147,21 @@ execShell 默认关闭，启用也只能调用**项目预设的只读操作**。
 - 当前 execShell 只见 bool / 退出状态线索，无 stdout 契约。工具不得伪造设备时间 / 架构结果，不得用临时文件读取 stdout 绕过边界；需要信息时优先窄 device adapter。
 - Global.execShell 同步阻塞与取消 / 超时能力待验证。无法满足执行期限、UI 响应和停止要求的预设必须禁用，不能因为 allowlist 就放行阻塞执行。
 
+### 7.1 自造工具与工具识别
+
+- 模型只能创建**声明式 recipe**（lookup / compute / template / text / convert），不得接受或执行模型提供的 JS 源码、`eval`、`Function`、动态 import 或 shell。recipe 必须有名称、描述、kind、spec、可选 keywords，并经过本地 schema/限额/枚举校验。
+- 自定义工具持久化在 `pa.customTools`，版本化 envelope；上限 8 个、单条 2048 UTF-8 bytes、目录 16 KiB。损坏/超限/未知字段显式 `STORAGE_ERROR`，不得静默覆盖。
+- 工具识别（`list_tools({query})` / `findTools`）只做有界、确定性的名称/关键字/描述与中文二元组排序；输入 ≤256 chars、结果 ≤5 条。识别结果不改变权限；删除自定义工具是禁用路径。
+- 自定义工具调用仍遵守整批 ID/参数校验、每 run 24 次、每批 8 次、结果 4 KiB 截断和取消语义；动态 registry 每次模型迭代解析，同轮创建的 recipe 只能从下一轮开始出现。
+
+### 7.2 工作区文件与执行工具
+
+- 允许 AI 编辑/删除/执行文件时，唯一根是 app 私有工作区：由 `$workspace` 推导为 `<appid>/data/penagent-workspace`，不得接受绝对路径、`..`、控制字符、反斜杠、`~` 或越界路径；工作区根不可删除。
+- `file_write` 使用 POSIX 单引号转义 + `/bin/sh -c printf`，随后用 `fs.stat` 校验；`file_read` 拒绝二进制/超限；`file_delete` 只删除文件或空目录；输出必须限幅并保留截断标记。
+- `file_exec` 默认关闭、设置页显式开启；命令以工作区为 cwd，`/bin/timeout` 硬限制真实墙钟时间，输出有界，参数/命令长度受限；不把退出码或 stdout 当作安全协议状态。已开始的子进程不能保证立即物理撤销，UI 不得宣称已撤销。
+- 工作区适配器是唯一接触 Falcon `fs`/`process` 的模块；页面/registry 不得直接 import 平台模块。路径纯函数、适配器、工具三层都需测试；设备自检与开发模式 AI 测试必须与实际工具共用同一适配器。
+- 平台无直接 fs 写入 API 时，只允许已验证的 shell 重定向写回 + fs 校验组合；不得用 native `.so`、execShell stdout 伪造、或把文件写到工作区之外。
+
 ## 8. 配置、凭据与隐私
 
 `pa.settings` 使用版本化 envelope；字段保留 baseUrl、model、temperature、maxTokens、tools、execShellEnabled，增加 `persistApiKey`（默认 false）。各字段有长度 / 范围 / 枚举验证；模型不得更改设置。
@@ -192,7 +209,7 @@ execShell 默认关闭，启用也只能调用**项目预设的只读操作**。
 
 ## 13. 审查与验收门槛
 
-纯逻辑测试必须覆盖：OpenAI 结构 / JSON / schema / ID 验证、未知与禁用工具、6 次 POST / 24 次工具 / 时间预算、完整工具组裁剪、取消与旧回调、calculator 非法文法 / 除零、预设 shell 注入拒绝与 quoting、storage 排序 / 失败恢复 / 迁移、UTF-8 字节限额，以及 POST 各类失败仅一次发送。mock 验证多工具结果一一对应；敏感哨兵值不能进入任何日志 / artifact。
+纯逻辑测试必须覆盖：OpenAI 结构 / JSON / schema / ID 验证、未知与禁用工具、6 次 POST / 24 次工具 / 时间预算、完整工具组裁剪、取消与旧回调、calculator 非法文法 / 除零、预设 shell 注入拒绝与 quoting、storage 排序 / 失败恢复 / 迁移、UTF-8 字节限额，以及 POST 各类失败仅一次发送。mock 验证多工具结果一一对应；敏感哨兵值不能进入任何日志 / artifact。自造工具还需覆盖 recipe 校验/执行/持久化/损坏/限额/识别排序；工作区工具需覆盖路径穿越拒绝、写入/读取/删除/执行、超时/输出截断、适配器缺失 fail closed，以及开发模式 curl 的私网/合成 key/清理闸门。emoji/字体符号回归与工作区设备自检/开发模式 AI 文件测试属于 0.3.0 新增验收项，见 PROGRESS R09。
 
 文档与代码审查检查所有几何路径、层间 import、硬编码尺寸、无 eval / 自由 shell、无隐藏 POST 重试、TLS 校验、每步记录。还须覆盖页面输入首 await 前快照、send reservation 与 stop 竞争、会话 owner/dirty/history 保存、loaded settings 门禁与 hide/show 重试；副作用执行前整批 ledger/audit reservation 串行持久化，保存失败/false/cancel 零执行，审计容量不得淘汰旧 ID 使之重放；排队写在原生调用前再查 cancel/timeout。它们是审查门槛，不表示仅凭文档已修。R06/R07 历史发现与 R08 最终宿主回归/限定复核见 PROGRESS；持久/重启防重放/取消的宿主回归已通过，不表示真机出口关闭。源扫描只能辅助，不能取代动态 style、协议与运行时验证。
 

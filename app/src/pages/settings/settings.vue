@@ -14,7 +14,7 @@
       <setting-field label="密钥" :value="form.apiKey ? '••••••••（已设置）' : ''" placeholder="未设置" @edit="edit('apiKey')" />
       <text class="warning">密钥在此页遮罩；系统输入界面可能显示明文，请留意周围环境。</text>
       <setting-field label="模型" :value="form.model" placeholder="填写模型名称" @edit="edit('model')" />
-      <div class="choice" @click="togglePersist"><text class="choice-label">{{ form.persistApiKey ? '☑' : '☐' }} 记住密钥（默认仅保留在内存）</text></div>
+      <div class="choice" @click="togglePersist"><image class="toggle-icon" :src="persistIcon" mode="aspectFit"></image><text class="choice-label">记住密钥（默认仅保留在内存）</text><text class="toggle-state">{{ form.persistApiKey ? '已开启' : '已关闭' }}</text></div>
       <div v-if="confirmPersistence" class="confirmation">
         <text class="warning">设备本地以明文保存，能够读取设备数据的人可获取密钥。</text>
         <div class="choice" @click="confirmRemember"><text class="choice-label">我已了解，记住密钥</text></div>
@@ -22,9 +22,10 @@
       </div>
       <div class="choice" @click="clearKey"><text class="choice-label">清除密钥并保存</text></div>
       <text class="heading">工具权限</text>
-      <div v-for="tool in toolOptions" :key="tool.id" class="choice" @click="toggleTool(tool.id)"><text class="choice-label">{{ form.tools[tool.id] ? '☑' : '☐' }} {{ tool.label }}</text></div>
+      <text class="warning">文件工具只能访问应用私有工作区；工作区路径由运行时推导，不能访问系统其他目录。执行命令默认关闭。</text>
+      <div v-for="tool in toolOptions" :key="tool.id" class="choice" @click="toggleTool(tool.id)"><image class="toggle-icon" :src="toolIcons[tool.id]" mode="aspectFit"></image><text class="choice-label">{{ tool.label }}</text><text class="toggle-state">{{ form.tools[tool.id] ? '已开启' : '已关闭' }}</text></div>
       <setting-field label="探测域名" :value="form.allowedProbeHosts.join(', ')" placeholder="空：不允许网络探测" @edit="edit('allowedProbeHosts')" />
-      <div class="choice" @click="toggleExec"><text class="choice-label">{{ form.execShellEnabled ? '☑' : '☐' }} 允许只读命令预设</text></div>
+      <div class="choice" @click="toggleExec"><image class="toggle-icon" :src="execIcon" mode="aspectFit"></image><text class="choice-label">允许只读命令预设</text><text class="toggle-state">{{ form.execShellEnabled ? '已开启' : '已关闭' }}</text></div>
       <text class="warning">本固件的执行期限与停止能力未验证，预设当前不可执行，也不提供命令输出。</text>
       <text class="heading">开发测试</text>
       <div class="choice" @click="useMock"><text class="choice-label">使用本机 mock（替换为合成测试密钥）</text></div>
@@ -36,21 +37,36 @@
 </template>
 <script>
 import SettingField from '../../components/setting-field.vue';
+import { icon } from '../../assets/icons.js';
 import { getApplication, developerMockSettings, errorLabel } from '../../services/application.js';
 import * as input from '../../services/input/index.js';
 import { leaveSettings } from '../../services/navigation.js';
 const TOOL_OPTIONS = [
   { id: 'clock', label: '时间' }, { id: 'calculator', label: '计算器' },
   { id: 'note', label: '本地笔记' }, { id: 'device_info', label: '设备信息' }, { id: 'net_probe', label: '已允许域名的 HEAD 探测' },
+  { id: 'file_list', label: '查看工作区文件' }, { id: 'file_read', label: '读取工作区文本' },
+  { id: 'file_write', label: '创建或修改工作区文件' }, { id: 'file_delete', label: '删除工作区文件' },
+  { id: 'file_exec', label: '执行工作区命令或文件（高风险，默认关闭）' },
 ];
 function blankForm() {
   return { baseUrl: '', apiKey: '', model: '', temperature: 0.7, maxTokens: 1024,
     persistApiKey: false, execShellEnabled: false, developmentMode: false,
-    tools: { clock: true, calculator: true, note: true, device_info: true, net_probe: true, execShell: false }, allowedProbeHosts: [] };
+    tools: { clock: true, calculator: true, note: true, device_info: true, net_probe: true, execShell: false,
+      file_list: true, file_read: true, file_write: true, file_delete: true, file_exec: false }, allowedProbeHosts: [] };
 }
 export default {
   name: 'SettingsPage', components: { SettingField },
   data() { return { form: blankForm(), toolOptions: TOOL_OPTIONS, notice: '', saving: false, loading: false, loaded: false, confirmPersistence: false }; },
+  computed: {
+    // Inline PNG data URIs (assets/icons.js); device fonts cannot render glyph toggles.
+    persistIcon() { return icon(this.form.persistApiKey ? 'check-on' : 'check-off'); },
+    execIcon() { return icon(this.form.execShellEnabled ? 'check-on' : 'check-off'); },
+    toolIcons() {
+      const icons = {};
+      for (const tool of this.toolOptions) icons[tool.id] = icon(this.form.tools[tool.id] ? 'check-on' : 'check-off');
+      return icons;
+    },
+  },
   mounted() {
     this.ownerActive = true; this.destroyed = false; this.generation = 0; this.editing = null;
     this.application = getApplication(); this.attachInput();
@@ -133,7 +149,9 @@ export default {
 .settings { width: @content-w; height: 100vh; padding-left: 3vw; flex-direction: column; }
 .heading { width: @message-inner; margin-top: 3vh; margin-bottom: 3vh; font-size: @font-md; color: @accent; }
 .choice { width: @message-inner; min-height: 22vh; margin-top: 1vh; margin-bottom: 1vh; flex-direction: row; align-items: center; background-color: @bg-muted; border-radius: @radius-sm; }
-.choice-label { width: 64vw; margin-left: 2vw; font-size: @font-sm; color: @text-primary; }
+.choice-label { width: 48vw; margin-left: 1.5vw; font-size: @font-sm; color: @text-primary; }
+.toggle-icon { width: 2.4vw; height: 8vh; margin-left: 1.5vw; }
+.toggle-state { width: 9vw; font-size: @font-xs; color: @text-secondary; lines: 1; text-align: center; }
 .warning { width: @message-inner; margin-top: 1vh; margin-bottom: 3vh; font-size: @font-xs; color: @text-secondary; }
 .confirmation { width: @message-inner; flex-direction: column; }
 .notice { width: @message-inner; margin-top: 3vh; margin-bottom: 5vh; font-size: @font-sm; color: @accent; }

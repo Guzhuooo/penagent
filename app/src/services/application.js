@@ -1,16 +1,24 @@
 import { createHarness } from '../core/index.js';
 import { requestJson } from './net/index.js';
+import { createDevRequestJson } from './net/dev.js';
 import { getJson, setJson } from './storage/index.js';
 import { getDeviceInfo, execPreset, headProbe } from './device/index.js';
+import { getWorkspaceAdapter } from './device/workspace.js';
 import { MOCK_ORIGIN } from './device/development.js';
 
 let application = null;
 export function getApplication() {
   if (!application) {
-    application = createHarness({ requestJson, getJson, setJson, deviceInfo: getDeviceInfo, execPreset, headProbe });
+    const workspace = getWorkspaceAdapter();
+    // Development mode may use curl for a real status line; every other
+    // settings path falls back to the fail-closed production adapter.
+    const transport = createDevRequestJson(workspace, requestJson);
+    application = createHarness({ requestJson: transport, getJson, setJson, deviceInfo: getDeviceInfo, execPreset, headProbe, workspace });
   }
   return application;
 }
+
+export { getWorkspaceAdapter } from './device/workspace.js';
 
 // Selected explicitly in settings. Never reuse a user's production credential.
 export function developerMockSettings(settings) {

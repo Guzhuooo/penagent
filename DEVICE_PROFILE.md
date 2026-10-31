@@ -31,7 +31,7 @@
 | 设备端编译器 | **无**（无 gcc/cc/make/cmake） |
 | 宿主机交叉工具链 | **无**（无 aarch64-gcc / clang / 可用 WSL） |
 
-> ⚠️ **native 结论**：本机无法交叉编译 aarch64 `.so`。任何"自定义 native JSAPI"方案都需要先解决工具链，否则不可交付。
+> [注意] **native 结论**：本机无法交叉编译 aarch64 `.so`。任何"自定义 native JSAPI"方案都需要先解决工具链，否则不可交付。
 
 ## 3. 屏幕与输入
 
@@ -178,7 +178,7 @@ KV 存储应由 js-framework 提供，**API 形态未验证** → 列入 M0 探�
 | `8001749691786666` | **PulseBox 1.6.56** | 多页面架构、`setViewPort` 用法、BasePage 资源释放 |
 | `8001145141919811` | Doge阅读 1.1.2 | Storage 适配层写法 |
 
-> ⚠️ **PenBili 的原生播放器在本固件上不可用**：
+> [注意] **PenBili 的原生播放器在本固件上不可用**：
 > 它随包的 `libs/libjsapi_player.so` 是 **32 位 ARM（EM_ARM）**，
 > 而运行时是 **64 位 aarch64**，`dlopen` 必然失败；
 > 且 DictPen 日志的 `dynamic_load_jsapi` 列表中**没有** `libjsapi_player_*.so`。
@@ -187,12 +187,12 @@ KV 存储应由 js-framework 提供，**API 形态未验证** → 列入 M0 探�
 
 ## 11. vw/vh 支持现状
 
-> ✅ **M0 已实测确认，三行全部通过。** 详见 `SPIKE_REPORT.md` §2。
+> [通过] **M0 已实测确认，三行全部通过。** 详见 `SPIKE_REPORT.md` §2。
 
 | 层 | 结论 | 证据 |
 |---|---|---|
-| 构建器 | ✅ **支持** | `falcon-styler/lib/validator.js:175` `SUPPORT_CSS_UNIT = ['px','pt','wx','rpx','vh','vw','%']` |
-| **运行时** | ✅ **完全支持，已实测** | 探针铺 10/20/30/40vw + 10/15/25vh 色块，截图逐像素扫描：`100vw`=936px、`100vh`=280px，误差 ≤1px |
+| 构建器 | [通过] **支持** | `falcon-styler/lib/validator.js:175` `SUPPORT_CSS_UNIT = ['px','pt','wx','rpx','vh','vw','%']` |
+| **运行时** | [通过] **完全支持，已实测** | 探针铺 10/20/30/40vw + 10/15/25vh 色块，截图逐像素扫描：`100vw`=936px、`100vh`=280px，误差 ≤1px |
 | 在网应用 | 无一使用 | 桌面、播放器、PenBili（全 px，设计宽 800）、PulseBox 全为 px |
 
 ### 实测数值

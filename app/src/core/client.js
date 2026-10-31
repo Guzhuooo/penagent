@@ -18,18 +18,28 @@ export function validateResponse(data) {
   if (choice.finish_reason !== 'stop' || typeof message.content !== 'string') fail('PROTOCOL_ERROR');
   return { role: 'assistant', content: message.content };
 }
+// A registry is either a plain array (legacy/tests) or a function returning a
+// snapshot. The function form lets the harness expose custom tools that were
+// defined during the current run; it is re-resolved on every model iteration.
+export async function resolveRegistry(registry) {
+  const value = typeof registry === 'function' ? await registry() : registry;
+  if (!Array.isArray(value)) fail('CAPABILITY_UNAVAILABLE');
+  return value;
+}
 export function createOpenAIClient(requestJson, registry) {
   return {
-    async complete(messages, input, scope) {
+    async complete(messages, input, scope, snapshot) {
       scope.check();
       const settings = normalizeSettings(input);
       if (!settings.baseUrl || !settings.model) fail('CONFIG_ERROR');
       if (typeof requestJson !== 'function') fail('CAPABILITY_UNAVAILABLE');
+      const tools = snapshot === undefined ? await resolveRegistry(registry) : snapshot;
+      scope.check();
       const body = {
         model: settings.model, messages: trimContext(messages), temperature: settings.temperature,
         max_tokens: settings.maxTokens, stream: false
       };
-      const schemas = registry.filter(function (tool) { return toolEnabled(settings, tool.name); }).map(function (tool) {
+      const schemas = tools.filter(function (tool) { return toolEnabled(settings, tool.name); }).map(function (tool) {
         return { type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } };
       });
       if (schemas.length) body.tools = schemas;

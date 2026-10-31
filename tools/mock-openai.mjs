@@ -36,6 +36,32 @@ function complete(parsed) {
     if (results.length !== expected.length || expected.some(call => results.filter(msg => msg.tool_call_id === call.id).length !== 1)) return null;
     return completion({ role: 'assistant', content: '工具循环完成：计算器与时钟结果已一一对应返回。' });
   }
+  if (lastUser === 'synthetic-files') {
+    const rounds = calls.length;
+    function exactly(ids) {
+      const matched = active.filter(msg => msg.role === 'tool' && ids.indexOf(msg.tool_call_id) >= 0);
+      return ids.every(id => matched.filter(msg => msg.tool_call_id === id).length === 1) && matched.length === ids.length;
+    }
+    const writeIds = ['mock-file-write-' + userIndex, 'mock-file-read-' + userIndex, 'mock-file-exec-' + userIndex];
+    const deleteIds = ['mock-file-delete-' + userIndex];
+    if (rounds === 0) return completion({ role: 'assistant', content: null, tool_calls: [
+      { id: writeIds[0], type: 'function', function: { name: 'file_write', arguments: JSON.stringify({ path: 'notes/ai.txt', content: 'hello from synthetic AI' }) } },
+      { id: writeIds[1], type: 'function', function: { name: 'file_read', arguments: JSON.stringify({ path: 'notes/ai.txt' }) } },
+      { id: writeIds[2], type: 'function', function: { name: 'file_exec', arguments: JSON.stringify({ command: 'cat notes/ai.txt && printf exec-ok', timeoutMs: 2000 }) } },
+    ] }, 'tool_calls');
+    if (rounds === 1) {
+      if (!exactly(writeIds)) return null;
+      return completion({ role: 'assistant', content: null, tool_calls: [
+        { id: 'mock-file-keep-' + userIndex, type: 'function', function: { name: 'file_write', arguments: JSON.stringify({ path: 'notes/keep.txt', content: 'kept by synthetic AI' }) } },
+        { id: deleteIds[0], type: 'function', function: { name: 'file_delete', arguments: JSON.stringify({ path: 'notes/ai.txt' }) } },
+      ] }, 'tool_calls');
+    }
+    if (rounds === 2) {
+      if (!exactly(['mock-file-keep-' + userIndex].concat(deleteIds))) return null;
+      return completion({ role: 'assistant', content: '文件工具循环完成：写入、读取、执行、删除均已返回。' });
+    }
+    return null;
+  }
   return completion({ role: 'assistant', content: '合成测试对话成功。' });
 }
 

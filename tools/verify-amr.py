@@ -29,7 +29,7 @@ def verify(path, package):
                 raise ValueError("resource size mismatch: " + name)
             if hashlib.md5(data).hexdigest() != record.get("md5"):
                 raise ValueError("resource digest mismatch: " + name)
-        for required in ("app.js.bin", "index.js.bin", "settings.js.bin", "probe.js.bin"):
+        for required in ("app.js.bin", "index.js.bin", "settings.js.bin", "probe.js.bin", "tools.js.bin", "workspace.js.bin"):
             if required not in cert:
                 raise ValueError("missing entry: " + required)
         if manifest.get("icon") not in names:

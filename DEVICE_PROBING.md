@@ -10,14 +10,14 @@
 
 | 工具 | 状态 | 用途 |
 |---|---|---|
-| `perl` | ✅ **有**（系统自带） | **触控注入**（见 §2）、临时脚本；跑时加 `LC_ALL=C LANG=C` 压掉 locale 告警 |
-| `busybox` | ✅ | 全套 applet（`awk/sed/xxd/printf/...`） |
-| `evtest` | ✅ | 看输入设备能力（轴范围/键值） |
-| `gst-inspect-1.0` / `gst-launch-1.0` / `gst-discoverer-1.0` | ✅（1.22.0） | 解码链路验证（`tools/remote/gstprobe.sh`） |
-| `ffmpeg` | ✅ | 格式/流探测 |
-| `curl` 7.79.1（OpenSSL 1.1.1l） | ✅ | HEAD 探测、带 header 的接口测试 |
-| `modetest` | ✅ | DRM/connector 枚举（miniapp 持 master 时外部画不上去） |
-| `python3` / `lua` / `xxd` / gcc 系 | ❌ 无 | 复杂脚本逻辑放宿主机跑，笔上只留最小 glue |
+| `perl` | [通过] **有**（系统自带） | **触控注入**（见 §2）、临时脚本；跑时加 `LC_ALL=C LANG=C` 压掉 locale 告警 |
+| `busybox` | [通过] | 全套 applet（`awk/sed/xxd/printf/...`） |
+| `evtest` | [通过] | 看输入设备能力（轴范围/键值） |
+| `gst-inspect-1.0` / `gst-launch-1.0` / `gst-discoverer-1.0` | [通过]（1.22.0） | 解码链路验证（`tools/remote/gstprobe.sh`） |
+| `ffmpeg` | [通过] | 格式/流探测 |
+| `curl` 7.79.1（OpenSSL 1.1.1l） | [通过] | HEAD 探测、带 header 的接口测试 |
+| `modetest` | [通过] | DRM/connector 枚举（miniapp 持 master 时外部画不上去） |
+| `python3` / `lua` / `xxd` / gcc 系 | [失败] 无 | 复杂脚本逻辑放宿主机跑，笔上只留最小 glue |
 | `/bin/sh` | busybox ash | 脚本要用 POSIX 语法，`function`/数组不可用 |
 
 **输入设备清单**（`/proc/bus/input/devices`）：触摸屏 = `sitronix_ts_spi` →
@@ -42,7 +42,7 @@
 ```text
 install <amrPath>        覆盖安装；A/B 槽位(/pkg/<appid>/a|b)交替展开，日志报哪个槽
 uninstall <appid>
-start <appId> <page>     ⚠️ page 必须显式传且不能带 -- 前缀（--index → 找 --index.js → 黑屏）
+start <appId> <page>     [注意] page 必须显式传且不能带 -- 前缀（--index → 找 --index.js → 黑屏）
 startService <appId> <service>   三方应用对系统服务未授权（实测 not authorized）
 debugApp/debugService <appId>    设定 devtool/内存调试目标
 memoryUsage / memoryUsageGC      QuickJS 内存（GC 前后差值做泄漏判据）
@@ -64,13 +64,13 @@ setRenderConfig <key> <value>
 - 格式：**扁平 JSON 对象**，`{ "<key>": "<字符串值>" }`；我们存的是
   `{version:1, data:...}` 的 JSON 字符串（`storage/schema.js`）。
 - 用途：PC 登录工具直接往里写 `pd.douyin.auth`（`tools/login/douyin_qr_login.py`）。
-  ⚠️ 写回必须**整体重写文件**且保持合法 JSON，脚本已做「读回校验」。
+  [注意] 写回必须**整体重写文件**且保持合法 JSON，脚本已做「读回校验」。
 
 ## 5. 截图与「是否在播」取证
 
 - `capture` 只截 **UI 合成层**；`<video>` 实际播放时画面在硬件叠加层 →
   **播放中视频区全黑是正常现象**；反而在「卡在首帧」时能截到那一帧。
-  ⛔ 不要用「截图有画面/全黑」判断播放成败。
+  [禁止] 不要用「截图有画面/全黑」判断播放成败。
 - **判据三件套**（adb 一条命令内取差值）：
   ```sh
   i1=$(awk '/rkvdec/{print $2}' /proc/interrupts); r1=$(awk '/wlan0/{print $2}' /proc/net/dev)
@@ -121,9 +121,9 @@ setRenderConfig <key> <value>
 
 | 事实 | CV1826 机型（字节全家桶） | Y02（本机） |
 |---|---|---|
-| `<video>` 组件 | ❌ 无 → 必须随包 native FFmpeg 模块直写 fb0 | ✅ 有（GStreamerVideoView） |
-| `/dev/fb0` | ✅ 存在 | ❌ 不存在（captureFB 恒失败） |
-| 固件 FFmpeg TLS | ✅（原生模块可直连 https） | —（无 native 模块需求） |
+| `<video>` 组件 | [失败] 无 → 必须随包 native FFmpeg 模块直写 fb0 | [通过] 有（GStreamerVideoView） |
+| `/dev/fb0` | [通过] 存在 | [失败] 不存在（captureFB 恒失败） |
+| 固件 FFmpeg TLS | [通过]（原生模块可直连 https） | —（无 native 模块需求） |
 | 32 位 .so | 能用（设备是 32 位） | **dlopen 必失败**（运行时 64 位）；PenBili 的 libjsapi_player.so 即此坑 |
 | 逻辑屏 | 800×254 | 936×280（1vw=9.36px、1vh=2.8px，逐像素实测） |
 
@@ -138,3 +138,28 @@ setRenderConfig <key> <value>
 - `memoryUsageGC` 基线与「两次进出」泄漏差值。
 - `injectKey` 键值表、`setRenderConfig` 可配项。
 - `beginMonkey` 是否对三方应用生效。
+
+## 12. 文件与进程模块（2026-10-31 追加，0.3.0 工作区能力依据）
+
+用临时 `pages/fsprobe` 诊断页 + 真机 `miniapp_cli start` 实测，原始记录见
+`docs/evidence/fs-probe-0.3.0.txt`。结论（Y02 / 4.9.7 / QuickJS 20200705）：
+
+| 能力 | 实测结果 | 备注 |
+|---|---|---|
+| `import('fs')` | 可用；模块导出取 `mod.default || mod` | 参数为绝对路径 |
+| fs 方法 | `readFile/readdir/stat/exists/mkdir/rm/statfs` | **无 open/write/rename/writeFile** |
+| `readFile` | 文本返回 string；有时期望 `{result}` 包装 | 必须归一化 |
+| `readdir` | 返回文件名字符串数组 | 不含类型，需逐个 stat |
+| `stat` | 返回 `mode/size/...`；无 isFile/isDirectory 方法 | 用 `mode & 0o170000` 判类型 |
+| `rm` | 可删文件与空目录；不存在也返回 true | 非空目录需先处理 |
+| 工作区 | `$workspace` = `.../pkg/<appid>/<slot>/`，可写 | 0.3.0 使用 `<appid>/data/penagent-workspace` |
+| `import('process')` | 可用；`exec(file,args,options)` Promise | **execFile 语义，不是 shell 命令行** |
+| exec 结果 | `{code,signal,stdout,stderr}`；支持 `cwd/timeout/maxBuffer/killSignal` | 超时精度约 1s，故另用 `/bin/timeout` |
+| `/bin/timeout` | 存在（busybox） | 工作区执行用 `timeout <sec> /bin/sh -c ...` |
+| 写文件 | 无 fs 写 API；用 `/bin/sh -c "printf '%s' <quoted> > <path>"` + fs 校验 | 内容按 POSIX 单引号转义 |
+| `Global.execShell` | 同步返回 boolean，无 stdout；约 3ms | 仅作 process 模块缺失时的降级 |
+| `import('miniapp')` | 可 import 但键为空/函数未暴露 | 不作为路径来源 |
+| `import('path')` | 可用 `join` | join 不归一化 `..` |
+
+这些是 Y02 4.9.7 的实测能力，不代表其他固件；工作区路径、超时、`fs` 方法形态都必须按
+profile 重新验证。生产网络仍不受此影响，flat HTTP 的 TLS/redirect/status 结论见 R06。

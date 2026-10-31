@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-10-31 · 0.3.0：emoji/图标、自造工具、工作区文件执行与设备验收
+
+### R09 · 恢复现场、AI 文件工具闭环与最终预览包
+- **用户新要求**：继续完成应用，验收至少让 AI 编辑/删除/执行文件；目标机已用 ADB 连接；避免占用电脑资源导致卡死。执行策略：少并行、短命令、C/C++ 仍只在 GitHub Actions；设备侧用 ADB 完成安装/自检/截图/日志取证。
+- **恢复现场与基线修正**：上轮工作区遗留 `services/device/development.js` 的临时 LAN 地址 `http://<device-lan-ip>:8787`，导致 source-contract 测试失败（预期 127.0.0.1）。先改回 `http://127.0.0.1:8787`，基线恢复 legacy 5/5 + Node 93/93；随后并入上轮已完成但未收尾的 emoji 替换（`assets/icons.js` 内联 PNG、settings/session-rail、测试 fixture 4-byte 非 emoji 码点、`✅❌⚠⛔` 文档文字化、source-contract 禁 emoji）与自定义工具/识别（`custom.js`、`define_tool/delete_tool/list_tools`、`pa.customTools`、tools 页）。
+- **平台能力实测（只读/诊断）**：临时 `pages/fsprobe` 在 Y02 实测 `import('fs')` 可用（readFile/readdir/stat/exists/mkdir/rm/statfs，**无 open/write/rename**）、`import('process')` 可用（Promise `exec(file,args,options)` → `{code,signal,stdout,stderr}`，execFile 语义）、`/bin/timeout` 存在、`$workspace` 为安装槽目录；无 fs 写 API，写文件用 `/bin/sh -c "printf '%s' <quoted> > <path>"` + fs 校验。探针页在取证后从最终包移除，原始记录见 `docs/evidence/fs-probe-0.3.0.txt`；DEVICE_PROBING §12 归档。
+- **实现**：新增 `core/workspace.js`（纯路径/命令/限额）、`services/device/workspace.js`（唯一接触 fs/process 的适配器，可注入 module loader）、`tools/workspace.js`（file_list/file_read/file_write/file_delete/file_exec）、`pages/workspace`（根目录/列表/自检/开发模式 AI 测试）；`config.js` 增加 5 个工具开关（file_exec 默认关闭）、`runner.js` 注入 `ctx.workspace`、settings 页增加开关与高风险提示、tools 页增加文件工作区入口。开发模式真实网络：`services/net/dev.js` 仅对 developmentMode + 回环/私网 + 合成 key 用设备 curl，返回真实 status，带 `-m`+`/bin/timeout`、响应上限、`.net` 临时文件清理，不记录 body/header/key；生产/其他路径继续 fail closed。
+- **TDD / 失败修正**：(1) dev adapter 把 20000ms 传给工作区执行，超过工具 5000ms 上限→`ARGUMENT_ERROR`；拆分 `execTimeoutAdapterMaxMs=25000`，工具 schema 仍 5000。(2) 工作区页把 file_read 结果误显示为“写入”；调整判断顺序为删除/读取/写入/执行。(3) `Set-Content` 在 `app/package.json` 与 `app/test/net-dev.test.mjs` 写入 UTF-8 BOM，`verify-amr.py` 报 Unexpected UTF-8 BOM；剥离 BOM 后两个 AMR 校验通过。(4) 测试 fixture 新出现 😀，替换为 U+1D11E 保留 4-byte 覆盖。(5) 覆盖安装后未重启旧 realm 的一次 AI 重试返回 error/toolCalls=0；干净卸载/安装后同一包闭环成功，记录为运行态限制，不当作产品通过。(6) `.net` 空目录清理加入 dev adapter finally。
+- **宿主验证（最终源码）**：`node app/test/all.mjs` 退出0，legacy 5/5 + Node **124/124**，0 fail/cancelled/skipped（`docs/evidence/js-tests-0.3.0.txt`）；`python -m unittest discover -s tools/tests -p 'test_*.py'` **22/22**（`docs/evidence/ci-policy-tests-0.3.0.txt`）。新测试覆盖：路径穿越/命令引用/限额、工具 schema 与输出截断、适配器注入、真实 HTTP mock 3 请求 5 工具闭环、dev curl 私网/合成 key/清理/超时、自造工具持久化/识别/损坏存储。
+- **构建与包**：`npm --prefix app run build` 与 `build:prod` 均退出0；`verify-amr.py` 两包均通过（10 个证书资源、无 `.so`）。debug **455247 B / SHA-256 37431def3660afbd262226ff4016c3199bd9362e7f705904f049e3ce753f49d5**；production 构建模式 **443721 B / SHA-256 86d0a93298359463b880aeb61ff086a6191b15799728c658af5a5b4e9f15d972**；日志 `docs/evidence/build-*-0.3.0.txt`、`amr-*-0.3.0.json`。
+- **真机验收（Y02 / 4.9.7 / ADB <device-serial>）**：干净卸载/安装 0.3.0 debug 均 ret:0；启动 `workspace` 页。`运行自检` 产生 `[pa:workspace] selftest {"ok":true,"steps":9}`（写/读/追加/列目录/执行/退出码/删文件/删空目录）。开发模式 LAN 合成 mock 驱动 3 次模型 POST（mock 记录 5055/6388/7214 bytes、authorized=true），设备 `[pa:devnet] curl` 3 次后 `[pa:workspace] ai-file-test {"status":"completed","toolCalls":5}`；实际执行 file_write/file_read/file_exec/file_write/file_delete，最终 `notes/keep.txt` 内容 `kept by synthetic AI` 留存、`notes/ai.txt` 不存在。截图 `app/artifacts/0.3.0/final-selftest.png`、`final-ai-lines2.png`、`settings-file-tools.png`、`tools.png`、`chat.png`；证据 `docs/evidence/workspace-selftest-0.3.0.txt`、`workspace-ai-test-0.3.0.txt`、`workspace-device-0.3.0.txt`。取证后把设备设置恢复为空生产配置（无 key/URL/dev 模式、file_exec=false），清理 notes/.net，并停止 mock。
+- **文档**：README/PLAN/STANDARDS/VALIDATION/DEVICE_PROBING 更新；新增 `docs/CUSTOM_TOOLS.md`、`docs/WORKSPACE_TOOLS.md`、`app/src/core/README.md` 工具/适配器/限额章节；`tools/verify-amr.py` 必需页加入 tools/workspace；`tools/mock-openai.mjs` 增加 `synthetic-files` 场景；`docs/evidence/source-sha256-0.3.0.json` 记录 142 个源文件 SHA。
+- **GitHub Actions / native**：私有仓库 `Guzhuooo/penagent` 与 `.github/workflows/native-compile.yml` 已有三次绿色 run（40168576908 / 40168752041 / 40169416478；JS 93/93、策略 22/22、宿主 CTest 1/1、AArch64 compile-only ELF64/AArch64）。所有 C/C++ 编译仅在 Actions，未在本机执行；设备 `.so` 仍阻塞于获批 toolchain/sysroot bundle，native-manual 保持 disabled。
+- **结论 / 仍未关闭**：0.3.0 的 AI 编辑/删除/执行文件能力在真机（合成开发流量）完成闭环；生产真实 endpoint、生产安全 network adapter、TLS/redirect/status/期限、IME 取消/重复开关、两次进出内存差、多分辨率、native `.so` 构建/加载均未通过。开发 curl 仅限合成/私网，不能解锁生产。下一步：最终源码推送 + CI 复跑、继续生产安全通道与设备矩阵验收。
+
+---
+
 ## 2026-10-17 · 续接核验与纠错
 
 ### R08 · 页面交错回归、最终宿主验证与预览包归档
@@ -81,18 +98,18 @@
 - **做了**：mock 服务器起 8787；Windows 防火墙加规则放行 8787（限内网段）；构建/安装/启动探针 app（appid `8002026100700001`）；用 `tools/remote/pen.sh`（pendouyin 移植）注入触控逐项跑探针。
 - **证据**：`app/artifacts/probe1-10.png`；DictPen 日志 `grep pa:probe`。
 - **结论**：
-  - GET + Bearer 自定义 header ✅ 端到端可达；**POST body 四种字段名全部不透传 ❌**；execShell 只有退出码无 stdout ❌ → 纯 JS 无法调 OpenAI 接口。
-  - 存储 set/get ✅、系统输入法 startTextEdit 确认路径 ✅（键入 S → 确认 → 写回）、vw/vh ✅、console.warn 落日志 ✅（console.log ❌）。
+  - GET + Bearer 自定义 header [通过] 端到端可达；**POST body 四种字段名全部不透传 [失败]**；execShell 只有退出码无 stdout [失败] → 纯 JS 无法调 OpenAI 接口。
+  - 存储 set/get [通过]、系统输入法 startTextEdit 确认路径 [通过]（键入 S → 确认 → 写回）、vw/vh [通过]、console.warn 落日志 [通过]（console.log [失败]）。
   - 设备上三方 aarch64 native jsapi 模块（reciter 等）实测存在 → native 路线可行。
 - **[修正]** `DEVICE_PROBING.md` §6 的 `global.Global.execShell` 契约需补充：「返回 bool 退出码，无 stdout」已实测确认。
 - **下一步**：M0.5 native `libjsapi_httpx` 模块（POST body + 自定义 header + 响应回传），交叉编译走 GitHub Actions（SDK 已由用户提供至 `native/sdk/`）。
 
-### M0 环境与构建链 ✅
+### M0 环境与构建链 [通过]
 - adb 认证恢复（人工 `adb shell auth`）。
 - 宿主 node 20.18.0 / aiot-vue-cli@1.0.32；`aiot-cli -q -p` 出包成功；数字 appid 安装/启动/截图链路全通。
 - `app/` 骨架建成（BasePage/net/storage/input 移植自 pendouyin，tag `[pa:]`）；单测 5/5 通过。
 
-### M0：环境确认 ✅
+### M0：环境确认 [通过]
 - **做了**：`adb devices -l` → `<device-serial>  device`（在线，与 DEVICE_PROFILE §1 一致）。
 - **做了**：宿主工具链确认：node v20.18.0 / pnpm 10.12.4 / 全局 `aiot-vue-cli@1.0.32`（提供 `aiot-cli`，即 pendouyin 出包所用）。
 - **结论**：JS 构建链可用，M0 网关 3（构建链）关闭。设备实测 IP/连通性待探针验证。

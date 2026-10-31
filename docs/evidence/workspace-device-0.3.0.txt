@@ -1,0 +1,63 @@
+Y02 device verification — 0.3.0 workspace file/edit/delete/execute (2026-10-31)
+Profile: Y02-3562 / firmware 4.9.7 / appid 8002026100700001 / QuickJS 20200705
+ADB serial: <device-serial> (online). Host PC WLAN: <host-lan-ip>; device wlan0: <device-lan-ip>.
+Package under test: app/artifacts/0.3.0/penagent-0.3.0-debug.amr
+  bytes=455247  sha256=37431def3660afbd262226ff4016c3199bd9362e7f705904f049e3ce753f49d5
+Install: miniapp_cli uninstall 8002026100700001 -> ret 0; install -> {"appid":"8002026100700001","ret":0}
+Start: miniapp_cli start 8002026100700001 workspace -> {"ret":0}
+Screenshots (app/artifacts/0.3.0/): final-selftest.png, final-ai-completed.png,
+final-ai-lines2.png, settings-file-tools.png, tools.png, chat.png.
+No real endpoint, no real API key, no device serial in URLs/logs. Mock used synthetic content only.
+
+1) Workspace self-test (same adapter used by file_* tools)
+UI action 运行自检; device console:
+  10-31 14:06:12 WARN ... [pa:workspace] selftest {"ok":true,"steps":9}
+Steps displayed: root, write, read, append, list, exec, exit-code, delete, delete-dir.
+Screenshot: final-selftest.png (top) / final-ai-lines.png (list/exec/exit-code/delete pass).
+Workspace root on device:
+  /userdisk/secondary/miniapp/data/mini_app/pkg/8002026100700001/data/penagent-workspace
+
+2) AI-driven file tool loop on the device (development mode only)
+Settings seeded for verification (synthetic):
+  baseUrl=http://<host-lan-ip>:8787/v1, model=mock-gpt, apiKey=test-synthetic-key,
+  developmentMode=true, persistApiKey=true, tools.file_*=true, file_exec=true.
+Host mock: node tools/mock-openai.mjs with MOCK_HOST=0.0.0.0 (synthetic; logs metadata only).
+The model returned 3 responses over 3 POSTs; tool calls in the device run:
+  file_write notes/ai.txt, file_read notes/ai.txt, file_exec (cat + printf),
+  file_write notes/keep.txt, file_delete notes/ai.txt.
+Host mock request log (synthetic body sizes; authorized=true):
+  {"request":14,"status":200,"bytes":5055,"authorized":true}
+  {"request":15,"status":200,"bytes":6388,"authorized":true}
+  {"request":16,"status":200,"bytes":7214,"authorized":true}
+Device console:
+  10-31 14:06:15 [pa:devnet] curl        (x3; status returned by curl, metadata only)
+  10-31 14:06:16 [pa:workspace] ai-file-test {"status":"completed","toolCalls":5}
+Device filesystem after the loop:
+  find .../penagent-workspace -type f
+    .../penagent-workspace/notes/keep.txt
+  cat .../notes/keep.txt -> kept by synthetic AI (20 bytes)
+  notes/ai.txt -> absent (created, read, executed, then deleted by the AI tool calls)
+Screenshot: final-ai-lines2.png shows "AI 测试完成", 写入/读取 notes/ai.txt, 执行 code=0
+stdout=hello from synthetic AIexec-ok. The deleted file and retained keep.txt are verified by
+shell above; the UI list also shows notes/ dir.
+
+3) UI / emoji replacement
+- settings-file-tools.png: file tool toggles render as inline PNG check icons + 已开启/已关闭 text
+  (no ☑/☐ glyphs). chat.png: sidebar action is "新建会话" with inline plus icon; no ＋ glyph.
+- tools.png: 11 built-in tools (includes file_list/file_read/file_write/file_delete/file_exec) and
+  the 文件工作区 entry; meta tools are listed below.
+- Source-contract test scans app/src and fails on emoji/status glyphs; current suite passes.
+
+4) Honest boundaries
+- This verification used the explicit development-mode curl transport (services/net/dev.js) with
+  a synthetic key and a private LAN mock. It does NOT unlock production: flat HTTP remains
+  fail-closed (TLS verification off, no trustworthy HTTP status), and no real endpoint/real key
+  was sent. Production still requires the native/independently verified secure adapter.
+- One retry during iteration, launched from a stale page/realm after overwrite-install without a
+  process restart, ended with status=error/toolCalls=0; a clean uninstall/install reproduced the
+  successful loop above. Install over a running realm is not claimed as a reliable hot-reload path.
+- file_exec runs arbitrary shell commands by user opt-in; it is sandboxed to the workspace cwd but
+  is still a high-risk capability. Started child processes cannot be guaranteed to be physically
+  killed after cancellation; /bin/timeout bounds the wall clock.
+- IME, multi-resolution, memory/GC trends, real endpoint conversation and native .so remain
+  unverified for 0.3.0. See docs/VALIDATION.md.

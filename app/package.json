@@ -1,8 +1,8 @@
 {
   "name": "penagent",
   "appid": "8002026100700001",
-  "version": "0.2.0",
-  "description": "Guzhuooo Agent · 有道词典笔 Y02 轻量 LLM Agent Harness",
+  "version": "0.3.0",
+  "description": "Guzhuooo Agent 路 鏈夐亾璇嶅吀绗?Y02 杞婚噺 LLM Agent Harness",
   "icon": "icon.png",
   "type": "module",
   "quickjs": {

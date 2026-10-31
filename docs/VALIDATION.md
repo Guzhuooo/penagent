@@ -1,82 +1,100 @@
-# 0.2.0 验证状态
+# 0.3.0 验证状态
 
-更新：2026-10-17。**宿主集成预览已构建并校验；新版真机验收与生产网络仍未完成。** 每步修复、失败和历史更正在 [PROGRESS.md](PROGRESS.md)，总体出口在 [PLAN.md](PLAN.md)。
+更新：2026-10-31。**0.3.0 宿主测试、AMR 构建与 Y02 真机工作区/AI 文件工具闭环已完成；
+生产真实 endpoint 与生产安全网络仍未通过。** 逐步记录见 [PROGRESS.md](PROGRESS.md) R09，
+规划见 [PLAN.md](PLAN.md)，工具/工作区细节见 [CUSTOM_TOOLS](CUSTOM_TOOLS.md) /
+[WORKSPACE_TOOLS](WORKSPACE_TOOLS.md)。
 
 ## 本轮最终结果
 
 | 检查 | 实际方法 | 结果 / 边界 |
 |---|---|---|
-| 全量 JavaScript | `node app/test/all.mjs` | 旧 runner **5/5**；Node **93/93**；0 fail、cancelled、skipped |
-| CI 策略 | `python -m unittest discover -s tools/tests -p 'test_*.py'` | **22/22**；纯 Python，没有执行 C/C++ |
-| 页面与真实 core 集成 | 包含在上述 Node 套件 | 初始草稿、等待期间停止、完成工具组保存、交错新建/发送、持久 audit/重启防重放、reservation 保存期间取消、settings 加载门禁与重入 |
-| 宿主真实 HTTP | 临时端口 mock + fetch，包含在套件 | 两次模型 POST、calculator/clock 结果对应、最终答复、会话读回；不是 Falcon 真机 HTTP |
-| 平台适配器集成 | 实际 net/storage + 模拟 Falcon 回调 | JSON 对象 data、单次 POST、未知 status 拒绝、迟到回调、单层 envelope、损坏失败；cancel/timeout 的排队 note 原生写均为 0 |
-| 独立限定复核 | 只读源码与同 realm SFC + 真实 core 行为实验 | 原六项 Important 与后续 transition/send 竞态均关闭；定向 81/81。不是额外的全量测试数，也不保证全项目无其他缺陷 |
-| UI 源合同 | 套件 source-contract tests | 当前长度为 vw/vh、scroller 显式尺寸与方向、无 page 直调平台；不证明多尺寸视觉或触控通过 |
-| QuickJS 构建 | `npm --prefix app run build:prod`、`run build` | 均退出 0；保留 theme-default 缺失、外部 native global、Node http_parser 警告 |
-| AMR 只读校验 | `tools/verify-amr.py` | 两包 appid/version、6 个脚本资源 size/MD5、必需入口、图标与无 native 库通过；不证明真机兼容 |
-| CLI check | `aiot-cli check` | 既有退出 0；仅为环境检查，不是源码 lint |
-
-测试日志会显示 Node MockTimers 实验性警告；没有把警告隐藏为无输出成功。根目录不是 Git 仓库，未声称 `git diff --check` 或工作树干净；源码 whitespace 检查单独执行。
+| 全量 JavaScript | `node D:/penagent/app/test/all.mjs` | legacy **5/5**；Node **124/124**；0 fail/cancelled/skipped；日志 `docs/evidence/js-tests-0.3.0.txt` |
+| CI 策略 | `python -m unittest discover -s tools/tests -p 'test_*.py'` | **22/22**，纯 Python，无 C/C++ 执行 |
+| 自造工具 / 识别 | 套件 `custom-tools.test.mjs` + `ui.test.mjs` | recipe 校验/执行/持久化重启/损坏存储/限额/识别排序、define→调用→回答 3 请求闭环、工具页 IME 清理 |
+| 工作区工具 | `workspace.test.mjs` | 路径穿越拒绝、写/读/追加/删、执行超时与输出截断、适配器缺失 fail closed、真实 HTTP mock 3 请求 5 工具闭环 |
+| 开发 curl 传输 | `net-dev.test.mjs` | 私网/合成 key 闸门、真实 status、临时文件清理、超时/取消错误；非生产 adapter |
+| emoji 回归 | `source-contract.test.mjs` + 设备截图 | app/src 无 emoji/状态符号；图标为内联 PNG，状态用“已开启/已关闭”文字 |
+| QuickJS 构建 | `npm --prefix app run build` / `build:prod` | 均退出 0；保留 theme-default 缺失、runtime 外部模块、Node http_parser 警告 |
+| AMR 只读校验 | `tools/verify-amr.py` | 两包 appid/version、10 个脚本资源 size/MD5、入口含 app/index/settings/probe/tools/workspace、图标、无 native 库 |
+| 真机安装 | `miniapp_cli uninstall/install/start` | Y02 4.9.7，install/start ret:0；覆盖安装与干净安装均执行，最终以干净安装取证 |
+| 工作区自检 | 页面“运行自检” | 设备日志 `[pa:workspace] selftest {"ok":true,"steps":9}`；写/读/追加/列目录/执行/退出码/删除文件/删除空目录通过 |
+| 开发模式 AI 文件闭环 | LAN 合成 mock + 真机 | 3 次模型 POST（5055/6388/7214 bytes，authorized=true）→ 5 次工具调用；最终 `notes/keep.txt` 留存、`notes/ai.txt` 删除，`status=completed toolCalls=5` |
+| 设备 UI | capture 截图 | 工作区、设置文件工具开关、工具页、聊天页；`settings-file-tools.png` 中开关为 PNG 图标 + 文字 |
 
 ## 最终预览包
 
-身份：appid `8002026100700001`，version `0.2.0`，规范入口 `index`，QuickJS `20200705`，无 `.so`。
+身份：appid `8002026100700001`，version `0.3.0`，规范入口 `index`，QuickJS `20200705`，无 `.so`。
 
 | 产物 | 字节 | SHA-256 |
 |---|---:|---|
-| `app/artifacts/0.2.0/penagent-0.2.0-debug.amr` | 426756 | `bed013a789cade131dbc5203001597c024425e2d4ce30e6b9c926b4a2ab56029` |
-| `app/artifacts/0.2.0/penagent-0.2.0-production.amr` | 420045 | `fe24f677d202efeb3fd572515ab7d89072c2114599f071d1fd18b116e349dbb5` |
+| `app/artifacts/0.3.0/penagent-0.3.0-debug.amr` | 455247 | `37431def3660afbd262226ff4016c3199bd9362e7f705904f049e3ce753f49d5` |
+| `app/artifacts/0.3.0/penagent-0.3.0-production.amr` | 443721 | `86d0a93298359463b880aeb61ff086a6191b15799728c658af5a5b4e9f15d972` |
 
-“production”只指 CLI 构建模式，**不是生产使用许可或验收通过**。两包都绑定修正后的 runtime 源码，开发 origin 保持 `http://127.0.0.1:8787`，没有临时宿主 LAN 地址。构建环境与依赖尚未完成干净机器锁定重建；源 SHA 快照不能替代可复现构建证明。
+“production”只指 CLI 构建模式，不是生产使用许可或验收通过。两个包都绑定最终源码；开发
+origin 已恢复为 `http://127.0.0.1:8787`，无临时 LAN 地址。构建环境和依赖锁定仍未在干净机器重建。
 
-## flat HTTP：生产禁用的原因
+## 工作区 / AI 文件能力
 
-历史匹配设备的 `libfalcon.so` 副本 SHA-256 为 `91e23dcef405d849e17757656cd2603ecc21cc9d20437bf38937c6b13b664a58`；函数 `HttpApiExtension::request @0x7577f0`、size `0x3ce8`，注册 `0x753728`。
+- 平台依据（Y02 实测）：`import('fs')` 可用但**无 open/write/rename**；`import('process')` 的
+  `exec(file,args,options)` 返回 `{code,signal,stdout,stderr}`；`/bin/timeout` 存在。写文件用
+  POSIX 引用后的 `printf > file` + fs 校验，执行统一 `/bin/timeout` 限时。原始记录见
+  `docs/evidence/fs-probe-0.3.0.txt`、`DEVICE_PROBING.md` §12。
+- 工作区根：`<appid>/data/penagent-workspace`，由 `$workspace` 槽目录推导，覆盖安装不删除 AI 文件。
+- 工具：`file_list/file_read/file_write/file_delete` 默认开启，`file_exec` 默认关闭（设置页可开，
+  高风险提示）。路径只能工作区相对；删除不允许根/非空目录；输出限幅。
+- 真机证据：`docs/evidence/workspace-selftest-0.3.0.txt`、`workspace-ai-test-0.3.0.txt`、
+  `workspace-device-0.3.0.txt`；截图 `app/artifacts/0.3.0/final-selftest.png`、
+  `final-ai-lines2.png`、`settings-file-tools.png`、`tools.png`、`chat.png`。
+- 取证后设备设置已恢复为空生产配置（无 key/URL/dev 模式，`file_exec=false`），工作区 notes/.net 已清理，
+  mock 已停止。
 
-| 地址 | 静态操作 | 结论 |
-|---|---|---|
-| `0x757934` | FOLLOWLOCATION(52)=1 | 自动跟随重定向 |
-| `0x75794c` | SSL_VERIFYPEER(64)=0 | 关闭证书链校验 |
-| `0x757964` | SSL_VERIFYHOST(81)=0 | 关闭主机名校验 |
-| `0x75797c` | CONNECTTIMEOUT_MS(156)=10000 | 连接 10 秒 |
-| `0x757998` | TIMEOUT_MS(155)=100000 | 总计 100 秒；旧总计 10 秒说法作废 |
-| `0x75a19c` | CURLINFO_RESPONSE_CODE，后仅认 200/201 | success 仅 `{result:'response text'}`，不返回 HTTP status |
+## 开发模式网络 / 生产边界
 
-只读取 url/header/method/data；未读取 caller TLS/redirect/timeout/signal，未发现该路径 abort。error 包装与 proxy error 3 不是 HTTP 状态，不 scrape 错误文本、不默认 200。JS timer 只限制等待，不能改 native 期限或证明物理取消。生产需要 native 或另一条独立验证安全 adapter，**不是因为 JSON POST 不可能**。
+生产仍禁用 flat `http.request`，原因不是 POST 不支持，而是已静态确认：关闭 TLS peer/hostname
+校验、自动 redirect、无真实 HTTP status、无 caller timeout/signal，未发现 abort。生产必须 native
+或其他独立验证安全 adapter。0.3.0 新增的 `services/net/dev.js` 只在
+`developmentMode=true` + 回环/私网 host + 合成 `Bearer test-/mock-/fake-` key 时使用设备 curl，
+返回 curl 真实 status，带 `-m` 与 `/bin/timeout`、响应上限、工作区临时文件清理，不记录 body/
+header/key；它**不是**生产 adapter，不能解锁真实 endpoint。真机 AI 文件测试只使用该通道与合成内容。
 
-当前 ADB 断开，本轮没有重新 hash 设备，也没有执行有效/无效证书测试；上述是指定本地副本的静态证据，不是动态证书测试或 exploit。详细来源见 [HTTP 调查](../tools/post-contract-notes.md)。正确 data + 假 Bearer 的真机 POST 送达仍待验，成功也不能解锁该 insecure flat 的生产使用。未知真实状态会被 core 拒绝，即使 mock 正文可解析也不会假装成功。
+## GitHub Actions / native
 
-## 本轮设备状态
+仓库 `Guzhuooo/penagent`（private）的 `.github/workflows/native-compile.yml` 已有三次绿色 run：
+`40168576908`、`40168752041`、`40169416478`（commit `824ffaf`）。每次均包含：
 
-先前指定 shell/help 与笔 curl 到合成 mock 曾成功，只证明当时连接可用。0.2.0 push 时目标消失，之后多次 `adb devices -l` 为空。**本轮新版 push/install/start 没有成功执行**，没有通过重启设备或 ADB 掩盖断连。旧 0.1.0 的安装/入口/IME 确认记录仅为历史窄范围证据。
+- Node 测试（当时 93/93，后续 0.3.0 源码本地 124/124）；Python 策略 22/22；
+- 宿主 CMake `HTTPX_BUILD_PLUGIN=OFF / HTTPX_BUILD_TESTS=ON` + CTest `1/1 Passed`；
+- AArch64 compile-only 冒烟：`aarch64-linux-gnu-g++ -c`，目标文件 ELF64/AArch64，不链接、不执行。
+- 证据目录 `docs/evidence/ci-native-0.3.0/`，含 run 摘要、host-ctest、aarch64-readelf、工具身份。
 
-## 环境清理
-
-- 临时 `0.0.0.0:8787` mock task 已停止；随后只读检查该端口监听数为 **0**。
-- 历史项目规则 Name `{750A4680-D434-48CF-AD2E-70ADF02FD95A}`、DisplayName `penagent-mock-8787`、本地 TCP8787、remote `<lan-subnet>` 仍存在。严格匹配后删除返回 **Windows Error 5 / 拒绝访问**，未提权或重试。
-- 该规则仍需管理员清理；不要删除其他入站规则。在管理员 PowerShell 中可仅针对该精确 Name 检查及移除。mock 停止不等于防火墙规则已删除。
+**所有 C/C++ configure/compile/link/CTest 只在 GitHub Actions 执行，本轮本机未执行。** 设备 `.so`
+仍阻塞：没有获批 vendor toolchain/sysroot bundle；`native/ci-policy.json` 保持 disabled，
+`native-manual.yml` 不启用。无设备 `.so`、ELF/SHA、真机加载/TLS 证据，不声称可用 native。
 
 ## 仍未完成 / 阻塞
 
-- ADB 恢复后的 0.2.0 首次/覆盖安装、显式 index、聊天/配置/工具/存储冷启动。
-- 真正 endpoint 对话；没有真实凭据，也不能经已确认 insecure 的 flat 试发真实 key/内容。
-- 安全 adapter 的 TLS peer/host、redirect、可信状态、接收限额、期限/取消/回收及有效/无效证书动态验收。
-- 系统 IME cancel/close/重复打开、前后台、敏感输入可见性；两次以上进入退出与预登记 memoryUsageGC 阈值；第二种逻辑尺寸与真机视觉/触控。
-- net_probe HEAD 与只读 exec 预设可靠期限/取消。当前默认能力拒绝，设置开关不能绕过。
-- GitHub 具体仓库、可见性、源码/SDK/sysroot/toolchain 上传范围与 immutable bundle 授权。workflow 已准备但 policy disabled；没有创建仓库、push、上传或触发 run。既有 action SHA 在线核验遇证书链错误，未绕过。
-- Native 的 Actions build/CTest/ELF/SHA 与真机加载。**所有 C/C++ configure/build/link/test 仅在 GitHub Actions，本轮未执行**。
-- 干净机器依赖锁定重建；孤立 session chunk 自动清理。4 MiB 是索引历史预算，不是全部底层存储物理上限；索引 commit 失败可能留下无索引块，见独立复核记录。
-- 上述精确防火墙规则管理员清理。
+- 真实 endpoint 对话与生产凭据使用；生产安全 adapter 的 TLS peer/host、redirect、可信 status、
+  接收限额、期限/取消/回收及有效/无效证书动态验收。
+- 设备端 `file_exec` 的物理取消：已开始子进程只保证 `/bin/timeout` 墙钟上限，不能保证立即撤销。
+- IME cancel/close/重复打开/前后台；两次进出与 `memoryUsageGC` 阈值；第二种逻辑分辨率 / 真机视觉/触控。
+- 覆盖安装后旧 realm 继续运行时出现的一次 AI 重试失败；干净安装成功。热重载/运行态刷新不是验收路径。
+- 真实 endpoint 下的自造工具创建/识别与工具页交互（本轮仅宿主 + 设备合成流量验证文件工具）。
+- native `.so` 的 GitHub Actions 获批 bundle 构建、ELF/依赖/符号/SHA 与真机加载。
+- 干净机器依赖锁定重建；孤立 session chunk 自动清理（4 MiB 只是索引历史预算）。
+- 历史防火墙规则 Named `{750A4680-D434-48CF-AD2E-70ADF02FD95A}` 仍需管理员清理（本轮未提权重试）。
 
 ## 证据
 
-- `docs/evidence/js-tests-0.2.0.txt`
-- `docs/evidence/ci-policy-tests-0.2.0.txt`
-- `docs/evidence/build-debug-0.2.0.txt`
-- `docs/evidence/build-production-0.2.0.txt`
-- `docs/evidence/review-0.2.0.md`
-- `docs/evidence/source-sha256-0.2.0.json`
-- `app/artifacts/0.2.0/*-manifest-check.json` 及两个 AMR
+- `docs/evidence/js-tests-0.3.0.txt`
+- `docs/evidence/ci-policy-tests-0.3.0.txt`
+- `docs/evidence/build-debug-0.3.0.txt` / `build-production-0.3.0.txt`
+- `docs/evidence/amr-debug-0.3.0.json` / `amr-production-0.3.0.json`
+- `docs/evidence/fs-probe-0.3.0.txt`
+- `docs/evidence/workspace-selftest-0.3.0.txt` / `workspace-ai-test-0.3.0.txt` / `workspace-device-0.3.0.txt`
+- `docs/evidence/emoji-scan-0.3.0.txt`
+- `docs/evidence/source-sha256-0.3.0.json`
+- `docs/evidence/ci-native-0.3.0/`
+- `app/artifacts/0.3.0/`（AMR 与设备截图；截图含 UI 但无 key/payload）
 
-这些是本地工程证据，不是远程发布授权。旧规划中的 appid、密钥和重试结论以当前 PLAN/STANDARDS/PROGRESS 更正为准；设备资料、SDK与运行数据不能整包上传。
+这些是本地/私有仓库工程证据，不是远程发布授权。设备资料、SDK、截图与本地运行数据不能整包公开发布。

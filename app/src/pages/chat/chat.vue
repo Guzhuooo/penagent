@@ -14,6 +14,7 @@
       </scroller>
       <div class="composer">
         <div class="input" @click="editDraft"><text class="draft">{{ draft || '点此输入问题…' }}</text></div>
+        <div class="tools" @click="openTools"><text class="tools-label">工具</text></div>
         <div class="send" :class="busy ? 'stop-color' : 'send-color'" @click="busy ? stopRun() : send()"><text class="send-label">{{ busy ? '停止' : '发送' }}</text></div>
       </div>
     </div>
@@ -92,6 +93,11 @@ export default {
         this.settings = settings;
         const sessions = await this.application.loadSessions();
         if (!this.valid(generation)) return;
+        // Preload persisted custom recipes so the next run advertises them.
+        if (typeof this.application.loadCustomTools === 'function') {
+          try { await this.application.loadCustomTools(); } catch (error) { if (this.valid(generation)) this.notice = errorLabel(error); }
+          if (!this.valid(generation)) return;
+        }
         // A dirty session is retained in memory until an explicit successful save.
         if (!this.dirty) {
           this.sessions = sessions;
@@ -156,6 +162,13 @@ export default {
       await stopped;
       if (!this.valid(generation)) return;
       try { navigate('settings'); } catch (error) { this.notice = errorLabel(error); }
+    },
+    async openTools() {
+      const stopped = this.stopRun();
+      const generation = this.generation;
+      await stopped;
+      if (!this.valid(generation)) return;
+      try { navigate('tools'); } catch (error) { this.notice = errorLabel(error); }
     },
     async editDraft() {
       if (this.busy) return;
@@ -289,9 +302,11 @@ export default {
 .retry { width: 35vw; min-height: @touch-min; margin-left: 3vw; flex-direction: row; align-items: center; justify-content: center; background-color: @bg-muted; border-radius: @radius-sm; }
 .retry-label { font-size: @font-sm; color: @text-primary; }
 .composer { width: @content-w; height: 24vh; flex-direction: row; align-items: center; }
-.input { width: 54vw; height: 20vh; margin-left: 3vw; flex-direction: row; align-items: center; border-radius: @radius-md; background-color: @bg-muted; }
-.draft { width: 50vw; margin-left: 2vw; font-size: @font-sm; color: @text-primary; lines: 1; text-overflow: ellipsis; }
-.send { width: 11vw; height: 20vh; margin-left: 2vw; flex-direction: row; align-items: center; justify-content: center; border-radius: @radius-md; }
+.input { width: 46vw; height: 20vh; margin-left: 3vw; flex-direction: row; align-items: center; border-radius: @radius-md; background-color: @bg-muted; }
+.draft { width: 42vw; margin-left: 2vw; font-size: @font-sm; color: @text-primary; lines: 1; text-overflow: ellipsis; }
+.tools { width: 9vw; height: 20vh; margin-left: 1vw; flex-direction: row; align-items: center; justify-content: center; border-radius: @radius-md; background-color: @bg-muted; }
+.tools-label { font-size: @font-xs; color: @text-primary; lines: 1; }
+.send { width: 11vw; height: 20vh; margin-left: 1vw; flex-direction: row; align-items: center; justify-content: center; border-radius: @radius-md; }
 .send-color { background-color: @brand; }
 .stop-color { background-color: @danger; }
 .send-label { font-size: @font-sm; color: @text-primary; lines: 1; }

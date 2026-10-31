@@ -31,9 +31,9 @@ test('documented get callback strings, object/array wrappers, keyed entries and 
   let result;
   const mock = install({ 'storage.getStorage': (_, callback) => callback(result) });
   try {
-    const raw = JSON.stringify(envelope({ content: '中文🙂' }));
+    const raw = JSON.stringify(envelope({ content: '中文𐍈' }));
     for (const value of [raw, { data: raw }, { value: raw }, { 'pa.note.a': raw }, [{ data: raw }], [{ value: raw }], [{ 'pa.note.a': raw }]]) {
-      result = value; assert.deepEqual(await getJson('pa.note.a', null), envelope({ content: '中文🙂' }));
+      result = value; assert.deepEqual(await getJson('pa.note.a', null), envelope({ content: '中文𐍈' }));
     }
     const fallback = { missing: true };
     for (const value of [undefined, null, '', [], {}, [{ data: '' }], [{ value: '' }], [{ 'pa.note.a': '' }]]) {
