@@ -18,7 +18,7 @@ configure、编译、链接、CTest 都只能发生在 Actions；本目录中的
   TLS/取消/运行时/加载兼容证据。
 - `.github/workflows/native-manual.yml` + `native/ci-policy.json`（`enabled: false`）
   保持原样：正式 released-artifact 链路仍需要获批的 vendor toolchain/sysroot bundle。
-- 仓库为私有仓库 `Guzhuooo/penagent`；这些日志中不含凭据；设备来源数据只来自项目
+- 该证据生成时仓库为 private，现已 public；这些日志中不含凭据；设备来源数据只来自项目
   已记录的 Y02 profile。
 
 ## 运行记录

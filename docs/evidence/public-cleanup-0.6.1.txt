@@ -1,0 +1,15 @@
+# 公开仓库清理记录（2026-10-31）
+
+- 仓库 `Guzhuooo/penagent` 已从 private 切换为 public。
+- 从**当前树与全部 Git 历史**移除 `native/device-bundle/device-bundle.tar.xz` 与
+  `native/device-bundle/manifest.json`：它们含用户设备的 SDK、固件运行库和 `libfalcon.so`，
+  不随公开仓库分发；仅保留 `build_bundle.py` / README，操作者从自己的设备生成。
+- `.gitignore` 增加这两个输出；`native-device-build.yml` 改为仅 `workflow_dispatch`，默认
+  跳过（需仓库变量 `NATIVE_DEVICE_BUNDLE_ENABLED=true` + 操作者自备 bundle）。
+- 全部 Git 历史中的设备序列号、局域网 IP、本地用户名路径已替换为占位符；未发现 API key
+  存在任何提交/历史/远端（测试 key 只在本机临时文件/设备设置，已清除）。
+- 移除本地旧 artifacts（0.2.0–0.6.0、device-0.2.0）、SDK zip、本地 `.so` 与临时脚本；
+  保留 0.6.1 AMR/截图与仓库证据。
+- 公开仓库大小约 1 MB Git pack（清理前含 6.95 MB 设备 bundle）。
+- 验证：从公开远端 mirror clone 后，`git rev-list --objects --all` 无 bundle、`git grep`
+  全历史无 key/序列号/IP；GitHub 页面匿名 HTTP 200。
