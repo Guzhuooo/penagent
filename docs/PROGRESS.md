@@ -19,6 +19,9 @@
 - **文档**：README/PLAN/STANDARDS/VALIDATION/DEVICE_PROBING 更新；新增 `docs/CUSTOM_TOOLS.md`、`docs/WORKSPACE_TOOLS.md`、`app/src/core/README.md` 工具/适配器/限额章节；`tools/verify-amr.py` 必需页加入 tools/workspace；`tools/mock-openai.mjs` 增加 `synthetic-files` 场景；`docs/evidence/source-sha256-0.3.0.json` 记录 142 个源文件 SHA。
 - **GitHub Actions / native**：私有仓库 `Guzhuooo/penagent` 与 `.github/workflows/native-compile.yml` 已有三次绿色 run（40168576908 / 40168752041 / 40169416478；JS 93/93、策略 22/22、宿主 CTest 1/1、AArch64 compile-only ELF64/AArch64）。所有 C/C++ 编译仅在 Actions，未在本机执行；设备 `.so` 仍阻塞于获批 toolchain/sysroot bundle，native-manual 保持 disabled。
 - **结论 / 仍未关闭**：0.3.0 的 AI 编辑/删除/执行文件能力在真机（合成开发流量）完成闭环；生产真实 endpoint、生产安全 network adapter、TLS/redirect/status/期限、IME 取消/重复开关、两次进出内存差、多分辨率、native `.so` 构建/加载均未通过。开发 curl 仅限合成/私网，不能解锁生产。下一步：最终源码推送 + CI 复跑、继续生产安全通道与设备矩阵验收。
+- **最终推送阻塞（如实记录）**：本地已提交 0.3.0 完整源码 `c2392c0`，但本机 hosts 把 `github.com` /
+  `api.github.com` 解析到 `127.0.0.1`（443 无监听），`git push` 与 `gh` 均连接被拒；未修改 hosts、
+  未伪造 CI。既有 CI 绿色 run 绑定 `824ffaf`；网络恢复后需 push 并重跑 native-compile，下载新证据。
 
 ---
 

@@ -86,7 +86,9 @@ compile-only 冒烟（不链接、不执行、不生成 `.so`）。所有 C/C++ 
 任何 configure/compile/link/CTest。
 
 - 最近证据：`docs/evidence/ci-native-0.3.0/`（run 40168576908 / 40168752041 / 40169416478 均
-  绿；宿主 CTest 1/1、AArch64 目标文件 ELF64/AArch64）。
+  绿；宿主 CTest 1/1、AArch64 目标文件 ELF64/AArch64）。最终 0.3.0 源码本地 commit `c2392c0`
+  已提交，但本机 hosts 把 `github.com` 解析到 `127.0.0.1`，`git push`/`gh` 被拒绝，最终 CI
+  run 未触发；网络恢复后需 push 并重跑 `native-compile.yml`，不把本地结果冒充 CI。
 - 设备 `.so` 交付仍阻塞：需要获批的 vendor toolchain/sysroot bundle；`native/ci-policy.json`
   保持 disabled，`native-manual.yml` 不启用。无 CI 设备产物、ELF/SHA、真机加载与 TLS 证据，
   不声称可用 `.so`。
