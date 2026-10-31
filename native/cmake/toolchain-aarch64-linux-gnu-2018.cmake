@@ -12,13 +12,26 @@
 # CMAKE_SYSROOT == HTTPX_SYSROOT).
 #
 # This file never compiles anything by itself; all use is inside GitHub Actions.
-if(NOT DEFINED HTTPX_SYSROOT OR NOT IS_ABSOLUTE "${HTTPX_SYSROOT}")
-    message(FATAL_ERROR "Pass an absolute -DHTTPX_SYSROOT=<merged device sysroot> with this toolchain file")
+# CMake's compiler-ABI detection re-runs this toolchain file inside a try_compile
+# sub-project, where the parent's -DHTTPX_SYSROOT cache entry is not guaranteed to
+# be forwarded. Resolve the sysroot from the cache variable, the environment (set
+# by native/cmake/device-build-2018.sh) and finally CMAKE_SYSROOT.
+if(DEFINED HTTPX_SYSROOT AND IS_ABSOLUTE "${HTTPX_SYSROOT}")
+    set(_httpx_sysroot "${HTTPX_SYSROOT}")
+elseif(DEFINED ENV{HTTPX_SYSROOT} AND EXISTS "$ENV{HTTPX_SYSROOT}")
+    set(_httpx_sysroot "$ENV{HTTPX_SYSROOT}")
+elseif(DEFINED CMAKE_SYSROOT AND IS_ABSOLUTE "${CMAKE_SYSROOT}")
+    set(_httpx_sysroot "${CMAKE_SYSROOT}")
+else()
+    message(FATAL_ERROR "Pass an absolute -DHTTPX_SYSROOT=<merged device sysroot> (or set HTTPX_SYSROOT in the environment) with this toolchain file")
+endif()
+if(NOT IS_DIRECTORY "${_httpx_sysroot}")
+    message(FATAL_ERROR "HTTPX_SYSROOT is not a directory: ${_httpx_sysroot}")
 endif()
 
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
-set(CMAKE_SYSROOT "${HTTPX_SYSROOT}")
+set(CMAKE_SYSROOT "${_httpx_sysroot}")
 set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
 set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
 set(CMAKE_NM aarch64-linux-gnu-nm)
@@ -26,7 +39,7 @@ set(CMAKE_READELF aarch64-linux-gnu-readelf)
 set(CMAKE_AR aarch64-linux-gnu-ar)
 set(CMAKE_RANLIB aarch64-linux-gnu-ranlib)
 set(CMAKE_STRIP aarch64-linux-gnu-strip)
-set(CMAKE_FIND_ROOT_PATH "${HTTPX_SYSROOT}")
+set(CMAKE_FIND_ROOT_PATH "${_httpx_sysroot}")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

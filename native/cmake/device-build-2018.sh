@@ -21,6 +21,8 @@ OUT="${OUT:-/out}"
 # Keep the assembled sysroot and build tree outside the mounted repo.
 SYSROOT="${SYSROOT:-/tmp/ci-sysroot}"
 BUILD_DIR="${BUILD_DIR:-/tmp/build-device}"
+# Also exported so CMake try_compile sub-projects can re-resolve the sysroot.
+export HTTPX_SYSROOT="$SYSROOT"
 TOOLCHAIN_ROOT=/usr/aarch64-linux-gnu
 EXPECTED_CURL_NUM="0x074f01"
 
