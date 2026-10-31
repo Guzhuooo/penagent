@@ -52,8 +52,8 @@ mkdir -p "$OUT"
     echo "readelf: $(aarch64-linux-gnu-readelf --version | head -n 1)"
     dpkg-query -W -f='${Package} ${Version}\n' \
         g++-aarch64-linux-gnu binutils-aarch64-linux-gnu libc6-dev-arm64-cross 2>/dev/null || true
-} > "$OUT/toolchain-identity.txt"
-cat "$OUT/toolchain-identity.txt"
+} > "$OUT/container-toolchain-identity.txt"
+cat "$OUT/container-toolchain-identity.txt"
 
 compiler_version="$(aarch64-linux-gnu-g++ --version | head -n 1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
 compiler_triple="$(aarch64-linux-gnu-g++ -dumpmachine)"
@@ -155,6 +155,6 @@ aarch64-linux-gnu-readelf -d "$OUT/libjsapi_httpx.so" | grep -E 'NEEDED|SONAME|R
         echo "  $(basename "$file") $(sha256sum "$file" | cut -d' ' -f1)"
     done
     echo "curl_headers: $(sha256sum "$SYSROOT/usr/include/curl/curlver.h" | cut -d' ' -f1) curlver.h"
-} >> "$OUT/toolchain-identity.txt"
+} >> "$OUT/container-toolchain-identity.txt"
 
 step "build finished"

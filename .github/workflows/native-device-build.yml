@@ -99,7 +99,14 @@ jobs:
       - name: Assemble artifact checksums and run summary
         run: |
           cd "$RUNNER_TEMP/device-out"
-          cat container-image.txt >> toolchain-identity.txt
+          # Container-written files are root-owned; assemble the final identity
+          # file on the host so it stays writable/readable for the runner.
+          {
+            cat container-toolchain-identity.txt
+            echo
+            echo "container_image_and_id:"
+            cat container-image.txt
+          } > toolchain-identity.txt
           sha256sum libjsapi_httpx.so build.log elf-report.json toolchain-identity.txt > SHA256SUMS
           cat SHA256SUMS
           {
