@@ -1,0 +1,191 @@
+{
+  "artifact": {
+    "elf": "ELF64 little-endian AArch64 DYN",
+    "path": "libjsapi_httpx.so",
+    "sha256": "22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd",
+    "size": 488520,
+    "soname": "libjsapi_httpx.so"
+  },
+  "bundle": {
+    "manifest_sha256": "3a2f98c36cf70997a8fc63922df91b70f3c63487b7a5e64559b7766ce2644dd2",
+    "profile": "y02-4.9.7",
+    "verified_files": 121
+  },
+  "checks": [
+    "bundle manifest and file SHA-256 verified",
+    "ELF64 little-endian AArch64 DYN",
+    "no PT_INTERP / RPATH / RUNPATH / TEXTREL",
+    "custom_init_jsapis exported",
+    "every DT_NEEDED resolved to a bundle provider with matching SHA-256 and SONAME",
+    "required GLIBC/GLIBCXX/CXXABI/GCC <= device maxima and defined by providers"
+  ],
+  "device_compatibility": "NOT VERIFIED ON DEVICE: not installed into an AMR, not loaded, no TLS/cancellation/runtime evidence",
+  "device_maxima": {
+    "CXXABI": "CXXABI_1.3.13",
+    "GCC": "GCC_11.0",
+    "GLIBC": "GLIBC_2.36",
+    "GLIBCXX": "GLIBCXX_3.4.29"
+  },
+  "entry_point": "custom_init_jsapis (exported)",
+  "needed": [
+    "libcurl.so.4",
+    "libstdc++.so.6",
+    "libgcc_s.so.1",
+    "libc.so.6",
+    "ld-linux-aarch64.so.1"
+  ],
+  "provider_defined_versions": [
+    "CXXABI_1.3",
+    "CXXABI_1.3.1",
+    "CXXABI_1.3.10",
+    "CXXABI_1.3.11",
+    "CXXABI_1.3.12",
+    "CXXABI_1.3.13",
+    "CXXABI_1.3.2",
+    "CXXABI_1.3.3",
+    "CXXABI_1.3.4",
+    "CXXABI_1.3.5",
+    "CXXABI_1.3.6",
+    "CXXABI_1.3.7",
+    "CXXABI_1.3.8",
+    "CXXABI_1.3.9",
+    "CXXABI_TM_1",
+    "GCC_11.0",
+    "GCC_3.0",
+    "GCC_3.3",
+    "GCC_3.3.1",
+    "GCC_3.4",
+    "GCC_3.4.2",
+    "GCC_3.4.4",
+    "GCC_4.0.0",
+    "GCC_4.2.0",
+    "GCC_4.3.0",
+    "GCC_4.5.0",
+    "GCC_4.7.0",
+    "GCC_7.0.0",
+    "GLIBCXX_3.4",
+    "GLIBCXX_3.4.1",
+    "GLIBCXX_3.4.10",
+    "GLIBCXX_3.4.11",
+    "GLIBCXX_3.4.12",
+    "GLIBCXX_3.4.13",
+    "GLIBCXX_3.4.14",
+    "GLIBCXX_3.4.15",
+    "GLIBCXX_3.4.16",
+    "GLIBCXX_3.4.17",
+    "GLIBCXX_3.4.18",
+    "GLIBCXX_3.4.19",
+    "GLIBCXX_3.4.2",
+    "GLIBCXX_3.4.20",
+    "GLIBCXX_3.4.21",
+    "GLIBCXX_3.4.22",
+    "GLIBCXX_3.4.23",
+    "GLIBCXX_3.4.24",
+    "GLIBCXX_3.4.25",
+    "GLIBCXX_3.4.26",
+    "GLIBCXX_3.4.27",
+    "GLIBCXX_3.4.28",
+    "GLIBCXX_3.4.29",
+    "GLIBCXX_3.4.3",
+    "GLIBCXX_3.4.4",
+    "GLIBCXX_3.4.5",
+    "GLIBCXX_3.4.6",
+    "GLIBCXX_3.4.7",
+    "GLIBCXX_3.4.8",
+    "GLIBCXX_3.4.9",
+    "GLIBC_2.0",
+    "GLIBC_2.17",
+    "GLIBC_2.18",
+    "GLIBC_2.22",
+    "GLIBC_2.23",
+    "GLIBC_2.24",
+    "GLIBC_2.25",
+    "GLIBC_2.26",
+    "GLIBC_2.27",
+    "GLIBC_2.28",
+    "GLIBC_2.29",
+    "GLIBC_2.30",
+    "GLIBC_2.31",
+    "GLIBC_2.32",
+    "GLIBC_2.33",
+    "GLIBC_2.34",
+    "GLIBC_2.35",
+    "GLIBC_2.36",
+    "GLIBC_ABI_DT_RELR",
+    "GLIBC_PRIVATE",
+    "ld-linux-aarch64.so.1",
+    "libc.so.6",
+    "libgcc_s.so.1",
+    "libstdc++.so.6"
+  ],
+  "providers": {
+    "ld-linux-aarch64.so.1": {
+      "device_path": "/usr/lib/ld-linux-aarch64.so.1",
+      "sha256": "f1b2e78496f3f676b4fb163f85a2ecf6edc344a68b678df71a5e00787eb9b892"
+    },
+    "libc.so.6": {
+      "device_path": "/usr/lib/libc.so.6",
+      "sha256": "e48e3acd4455291f8efccfd51995da6a714b2f1cf71400641168ca9cee4dc18e"
+    },
+    "libcurl.so.4": {
+      "device_path": "/usr/lib/libcurl.so.4.7.0",
+      "sha256": "c082e98468b87c65df32fb16a40ccafecda9000f5282f7fdebc9d8075ecd4ad0"
+    },
+    "libgcc_s.so.1": {
+      "device_path": "/usr/lib/libgcc_s.so.1",
+      "sha256": "8a59850e2a830d353ed287e55ef17b9dc1f7101fb87c6f581f4e3ddf0f9acf69"
+    },
+    "libstdc++.so.6": {
+      "device_path": "/usr/lib/libstdc++.so.6.0.29",
+      "sha256": "a7f4af5cc3e2a6e09d86ffa0f6807122621805f9ac7f41bce1b79feed5fbd037"
+    }
+  },
+  "schema_version": 1,
+  "tool": "native/cmake/audit_device_elf.py",
+  "unresolved_imports": {
+    "count": 174,
+    "note": "unversioned imports are expected Falcon host exports resolved at load time; this audit cannot prove they exist on the device runtime",
+    "unversioned_sample": [
+      "JS_AddModuleExport",
+      "JS_AtomToCString",
+      "JS_AtomToString",
+      "JS_Call",
+      "JS_CallConstructor",
+      "JS_DefinePropertyGetSet",
+      "JS_DefinePropertyValue",
+      "JS_DefinePropertyValueStr",
+      "JS_DeleteProperty",
+      "JS_DupAtom",
+      "JS_DupContext",
+      "JS_Eval",
+      "JS_EvalFunction",
+      "JS_FreeAtom",
+      "JS_FreeCString",
+      "JS_FreeContext",
+      "JS_GetArrayBuffer",
+      "JS_GetException",
+      "JS_GetGlobalObject",
+      "JS_GetOpaque"
+    ]
+  },
+  "version_requirements": {
+    "ld-linux-aarch64.so.1": [
+      "GLIBC_2.17"
+    ],
+    "libc.so.6": [
+      "GLIBC_2.17"
+    ],
+    "libgcc_s.so.1": [
+      "GCC_3.0"
+    ],
+    "libstdc++.so.6": [
+      "GLIBCXX_3.4.21",
+      "GLIBCXX_3.4.20",
+      "CXXABI_1.3.9",
+      "GLIBCXX_3.4.11",
+      "CXXABI_1.3",
+      "GLIBCXX_3.4.14",
+      "GLIBCXX_3.4"
+    ]
+  }
+}

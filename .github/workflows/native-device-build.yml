@@ -99,6 +99,7 @@ jobs:
       - name: Assemble artifact checksums and run summary
         run: |
           cd "$RUNNER_TEMP/device-out"
+          device_serial="$(python3 -c "import json;print(json.load(open('$RUNNER_TEMP/bundle/manifest.json'))['device']['adb_serial'])")"
           # Container-written files are root-owned; assemble the final identity
           # file on the host so it stays writable/readable for the runner.
           {
@@ -114,7 +115,8 @@ jobs:
             echo
             echo "- commit: \`${GITHUB_SHA}\`"
             echo "- run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "- bundle: \`${BUNDLE_ARCHIVE_SHA256}\` (profile y02-4.9.7, adb ${DEVICE_CONTAINER_IMAGE})"
+            echo "- bundle: \`${BUNDLE_ARCHIVE_SHA256}\` (profile y02-4.9.7, source device adb \`${device_serial}\`)"
+            echo "- container: ${DEVICE_CONTAINER_IMAGE}"
             echo "- toolchain: Ubuntu 18.04 \`g++-aarch64-linux-gnu\` (GCC 7.5.0), cmake 3.18.4, glibc 2.27 dev headers"
             echo "- artifact:"
             echo '```'

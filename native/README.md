@@ -1,9 +1,9 @@
-# Native CI preparation — not a compatibility claim
+# Native CI and device build — not a device compatibility claim
 
 此目录是可选 M0.5 路线。平台 POST 能力仍须有效复测；存在 SDK 不等于启用 native。
 遵循 `docs/STANDARDS.md` §11。**全部 C/C++ configure、编译、链接、CTest 只允许在 GitHub Actions；不要在本机执行 CMake、编译器或 CTest。**
 
-## 当前状态（2026-10-25）
+## 当前状态（2026-10-31）
 
 - 用户已授权创建**私有**仓库 `https://github.com/Guzhuooo/penagent`（默认分支 `main`）；
   public 可见性未授权，仓库实际为 private。
@@ -16,10 +16,18 @@
   @ `f4a020e`；两次两个 job 均成功，CTest 1/1 通过，AArch64 目标文件 SHA-256 一致。
   逐 run 明细、ctest 输出与下载的 artifact 见 `docs/evidence/ci-native-0.3.0/`。
   **本机从未执行** CMake、编译器或 CTest。
-- **仍阻塞**：设备 `.so` 的链接/交付需要获批的固定 toolchain + SDK + sysroot bundle
-  （来源、revision、SHA-256、许可、artifact 披露范围均未批准且不可下载），因此
-  `ci-policy.json` 保持 `enabled: false`、`native-manual.yml` 保持未启用；
-  AArch64 插件链接/设备加载仍需该 bundle。**本目录不声称任何 `.so` 设备兼容。**
+- 新增 `.github/workflows/native-device-build.yml`：在 `ubuntu:18.04` 容器内用 2018 年
+  代 GCC 7.5.0 AArch64 交叉工具链 + `native/device-bundle/`（真机 sysroot）构建 Falcon
+  JSAPI 插件，并对产物做 fail-closed 的 ELF/DT_NEEDED/版本符号审计。已绿运行：run
+  [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105)
+  @ `82783bb`，产物 `libjsapi_httpx.so` SHA-256
+  `22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd`（488,520 bytes）。
+  详见下节与 `docs/evidence/ci-native-0.3.0/native-device-run-41179283105/`。
+- **仍存在的边界**：`.github/workflows/native-manual.yml` + `native/ci-policy.json`
+  （`enabled: false`）仍等待用户批准具体 vendor toolchain/SDK/sysroot bundle、artifact
+  披露范围与 `native-reviewed` Environment 保护；它是独立的发布审核通道，本次真机自取
+  bundle 不替代该审批。设备插件**尚未**打进 AMR、未在设备加载，因此不声称设备加载、
+  TLS 信任链、取消语义或运行时兼容。
 - action 固定完整 revision：checkout `11bd71901bbe5b1630ceea73d27597364c9af683`
   （v4.2.2）、setup-node `39370e3970a6d050c480ffad4ff0ed4d3fdee5af`（v4.1.0）、
   upload-artifact `ea165f8d65b6e75b540449e92b4886f43607fa02`（v4.6.2）。本次已用
@@ -51,6 +59,51 @@
   设备分支 pin 的 7.79.1 无此弃用。
 - 重跑：`gh workflow run native-compile.yml --ref main`，然后
   `gh run list --workflow native-compile.yml` / `gh run view <run-id>`。
+
+## 设备插件构建：2018 工具链 + 真机 sysroot（已在 Actions 跑绿）
+
+`native/device-bundle/` 是从真机 `adb` 采集的构建输入（SDK + curl 7.79.1 headers +
+24 个设备运行库 + `libfalcon.so`，逐文件与设备 `sha256sum` 交叉校验并写入
+`manifest.json`；布局、SHA、provenance 见该目录 README）。`native/cmake/` 提供：
+
+- `toolchain-aarch64-linux-gnu-2018.cmake`：显式 AArch64 GNU 交叉工具链与 sysroot；
+- `device-build-2018.sh`：仅在容器内执行，装配 sysroot 并 configure/build；
+- `audit_device_elf.py`：在 runner 宿主机运行的 fail-closed ELF/ABI 审计。
+
+- workflow：`.github/workflows/native-device-build.yml`（`workflow_dispatch`；push 到
+  `main` 且改动该 workflow 或 `native/**` 时也运行）。流程：校验 bundle 压缩包 SHA +
+  仓库内 `manifest.json` 逐字节一致 → `ubuntu:18.04` 容器内编译（含
+  `CheckHttpxElf.cmake` post-build gate）→ 宿主机静态审计 → 打包 artifact。
+- 已绿运行：run
+  [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105)
+  @ `82783bb`，job "AArch64 plugin build (2018 toolchain + device bundle)" 全部步骤成功。
+- 工具链（全部在 Actions 容器内，本机未编译）：`ubuntu:18.04`
+  （`ubuntu@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98`，
+  image id `sha256:f9a80a55f492e823bf5d51f1bd5f87ea3eed1cb31788686aa99a2fb61a27af6a`）；
+  `aarch64-linux-gnu-g++ (Ubuntu/Linaro 7.5.0-3ubuntu1~18.04) 7.5.0`，triple
+  `aarch64-linux-gnu`；binutils 2.30；`cmake 3.18.4`（bionic 自带 3.10 过旧，容器内
+  `pip3 install cmake==3.18.4.post1`）；glibc 2.27 dev headers
+  （`libc6-dev-arm64-cross 2.27-3ubuntu1cross1.1`）。
+- sysroot：容器内 = 工具链自家 dev 文件 ∪ `native/device-bundle/sysroot`；设备库覆盖
+  同名工具链库，因此链接与审计都针对设备 ABI（glibc 2.36 / libstdc++ 6.0.29 /
+  libcurl 7.79.1 / OpenSSL 1.1.1l 等）。构建用 `HTTPX_BUILD_PLUGIN=ON`、
+  `HTTPX_BUILD_TESTS=OFF`，显式传入 toolchain file、`HTTPX_SYSROOT`、`HTTPX_SDK_DIR`
+  与 curl include/library；curl 7.79.1 `curlver.h` pin 未改。
+- 产物：`libjsapi_httpx.so`，488,520 bytes，SHA-256
+  `22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd`。
+- 静态审计（`elf-report.json`，不匹配即失败）：ELF64 little-endian AArch64 DYN；
+  SONAME `libjsapi_httpx.so`；无 PT_INTERP/RPATH/RUNPATH/TEXTREL；导出
+  `custom_init_jsapis`；DT_NEEDED = `libcurl.so.4, libstdc++.so.6, libgcc_s.so.1,
+  libc.so.6, ld-linux-aarch64.so.1`，每项都对应 bundle 内设备 provider 且 SHA/SONAME
+  匹配；所需版本符号均 ≤ 设备上限（GLIBC_2.17 ≤ 2.36、GLIBCXX_3.4.21 ≤ 3.4.29、
+  CXXABI_1.3.9 ≤ 1.3.13、GCC_3.0 ≤ GCC_11.0）。
+- artifact：Actions 中 `native-device-<source-sha>`（`libjsapi_httpx.so`、`build.log`、
+  `elf-report.json`、`SHA256SUMS`、`toolchain-identity.txt`、`summary.md`，保留 30 天）；
+  下载副本与审计报告见 `docs/evidence/ci-native-0.3.0/native-device-run-41179283105/`。
+  仓库 `.gitignore` 忽略 `*.so`，二进制只留在 Actions artifact，文本证据与 SHA 入库。
+- 边界：产物**未**安装进 AMR、**未**在真机加载，因此不声称设备加载、TLS 信任链、
+  取消语义或 Falcon 线程兼容；`native-manual.yml` 仍未启用，其正式发布链路仍需获批的
+  vendor bundle。
 
 ## 审批和运行边界
 
