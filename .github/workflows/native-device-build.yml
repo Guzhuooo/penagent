@@ -1,0 +1,150 @@
+name: Native device build (2018 toolchain, device sysroot)
+
+# Builds the Falcon JSAPI module `libjsapi_httpx.so` for profile y02-4.9.7 with a
+# genuinely 2018-era GNU AArch64 toolchain, using a sysroot bundle collected from
+# the real device (SDK + curl 7.79.1 headers + device runtime libraries +
+# libfalcon.so).
+#
+# All C/C++ configure/compile/link/ELF-check work runs inside GitHub Actions.
+# Nothing here is meant to run on a developer workstation.
+#
+# Trust boundary: this workflow statically links/audits against the device ABI and
+# verifies ELF64/AArch64, DT_NEEDED providers, version-symbol maxima, no
+# RPATH/PT_INTERP/TEXTREL and the `custom_init_jsapis` entry point. It does NOT
+# install the module into an AMR, load it on the device, or prove TLS,
+# cancellation, Falcon threading or runtime compatibility.
+# The strict reviewed pipeline (.github/workflows/native-manual.yml +
+# native/ci-policy.json enabled:false) stays untouched and disabled.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/native-device-build.yml
+      - native/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-device-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUNDLE_ARCHIVE: native/device-bundle/device-bundle.tar.xz
+  BUNDLE_ARCHIVE_SHA256: "2348651ea6a21e0a323b5cc974c03212f09ae0050a8b968750a9c90c4bd0063c"
+  BUNDLE_MANIFEST: native/device-bundle/manifest.json
+  # 2018-era toolchain: Ubuntu 18.04 g++-aarch64-linux-gnu (GCC 7.5.0, glibc 2.27
+  # dev headers) plus cmake==3.18.4.post1 from PyPI (bionic ships cmake 3.10).
+  DEVICE_CONTAINER_IMAGE: ubuntu:18.04
+  DEVICE_CMAKE_PYPI: cmake==3.18.4.post1
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -eo pipefail {0}
+
+jobs:
+  device-build:
+    name: AArch64 plugin build (2018 toolchain + device bundle)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify committed device bundle (fail closed)
+        run: |
+          echo "${BUNDLE_ARCHIVE_SHA256}  ${BUNDLE_ARCHIVE}" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bundle" "$RUNNER_TEMP/device-out"
+          tar -xJf "$BUNDLE_ARCHIVE" -C "$RUNNER_TEMP/bundle"
+          cmp "$BUNDLE_MANIFEST" "$RUNNER_TEMP/bundle/manifest.json"
+          python3 native/cmake/audit_device_elf.py \
+            --bundle "$RUNNER_TEMP/bundle" \
+            --out "$RUNNER_TEMP/device-out/bundle-report.json"
+          echo "bundle archive sha256: ${BUNDLE_ARCHIVE_SHA256}"
+          sha256sum "$RUNNER_TEMP/bundle/manifest.json" | tee "$RUNNER_TEMP/device-out/bundle-manifest.txt"
+
+      - name: Resolve the pinned 2018-era container image
+        run: |
+          docker pull "$DEVICE_CONTAINER_IMAGE"
+          docker image inspect "$DEVICE_CONTAINER_IMAGE" \
+            --format '{{index .RepoDigests 0}}' | tee "$RUNNER_TEMP/device-out/container-image.txt"
+          docker image inspect "$DEVICE_CONTAINER_IMAGE" \
+            --format '{{.Id}}' | tee -a "$RUNNER_TEMP/device-out/container-image.txt"
+          echo "host readelf: $(readelf --version | head -n 1)"
+
+      - name: Build libjsapi_httpx.so inside the 2018 container (compile only happens here)
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$RUNNER_TEMP/bundle:/bundle:ro" \
+            -v "$RUNNER_TEMP/device-out:/out" \
+            -w /work \
+            -e GITHUB_ACTIONS=true \
+            -e DEVICE_CMAKE_PYPI="$DEVICE_CMAKE_PYPI" \
+            "$DEVICE_CONTAINER_IMAGE" \
+            bash /work/native/cmake/device-build-2018.sh 2>&1 | tee "$RUNNER_TEMP/device-out/build.log"
+
+      - name: Static ELF/ABI audit against the device providers (fail closed)
+        run: |
+          python3 native/cmake/audit_device_elf.py \
+            --bundle "$RUNNER_TEMP/bundle" \
+            --artifact "$RUNNER_TEMP/device-out/libjsapi_httpx.so" \
+            --out "$RUNNER_TEMP/device-out/elf-report.json"
+          file "$RUNNER_TEMP/device-out/libjsapi_httpx.so"
+
+      - name: Assemble artifact checksums and run summary
+        run: |
+          cd "$RUNNER_TEMP/device-out"
+          cat container-image.txt >> toolchain-identity.txt
+          sha256sum libjsapi_httpx.so build.log elf-report.json toolchain-identity.txt > SHA256SUMS
+          cat SHA256SUMS
+          {
+            echo "# Native device build (2018 toolchain + device sysroot)"
+            echo
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- bundle: \`${BUNDLE_ARCHIVE_SHA256}\` (profile y02-4.9.7, adb ${DEVICE_CONTAINER_IMAGE})"
+            echo "- toolchain: Ubuntu 18.04 \`g++-aarch64-linux-gnu\` (GCC 7.5.0), cmake 3.18.4, glibc 2.27 dev headers"
+            echo "- artifact:"
+            echo '```'
+            grep -E 'artifact sha256|artifact size' build.log || true
+            sha256sum libjsapi_httpx.so
+            echo '```'
+            echo "- static audit (elf-report.json):"
+            echo '```'
+            python3 - <<'PY'
+          import json
+          report = json.load(open("elf-report.json"))
+          print("needed:", ", ".join(report.get("needed", [])))
+          print("soname:", report.get("artifact", {}).get("soname"))
+          print("providers:", ", ".join(sorted(report.get("providers", {}))))
+          print("device maxima:", report.get("device_maxima"))
+          print("entry point:", report.get("entry_point"))
+          print("unresolved imports:", report.get("unresolved_imports", {}).get("count"))
+          PY
+            echo '```'
+            echo "- NOT device evidence: not installed into an AMR, not loaded on the device,"
+            echo "  no TLS / cancellation / Falcon threading / runtime claim."
+          } > summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload device artifact and text evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-device-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/device-out/libjsapi_httpx.so
+            ${{ runner.temp }}/device-out/build.log
+            ${{ runner.temp }}/device-out/elf-report.json
+            ${{ runner.temp }}/device-out/SHA256SUMS
+            ${{ runner.temp }}/device-out/toolchain-identity.txt
+            ${{ runner.temp }}/device-out/summary.md
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 30
+          compression-level: 0
