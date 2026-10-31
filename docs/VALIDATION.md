@@ -10,7 +10,7 @@
 |---|---|
 | JS 全量 | legacy **5/5** + Node **136/136**，0 fail；`docs/evidence/js-tests-0.5.0.txt` |
 | Python 策略 | **22/22**；`docs/evidence/ci-policy-tests-0.5.0.txt` |
-| CI native-compile | 最新 run（见 `docs/evidence/ci-native-0.3.0/`）JS 136/136、CTest 1/1、AArch64 smoke |
+| CI native-compile | run [41183485514](https://github.com/Guzhuooo/penagent/actions/runs/41183485514) @ `1e4d12a` 绿：JS **136/136**、策略 22/22、宿主 CTest 1/1、AArch64 smoke |
 | AMR 构建/校验 | 0.5.0 debug **641126 B / SHA `584124ce…af6a`**，production **628708 B / SHA `f0aa5896…493b`**；均含 `libs/libjsapi_httpx.so`（SHA `970b6a33…`），`verify-amr.py --native-sha256` 通过 |
 | 真机安装 | 0.5.0 debug，uninstall/install/start ret:0 |
 | 真机真实对话 | probe → 真实对话：`完成 · 工具 1 · 当前 UTC 时间是 2026-10-31 08:04:53。 · 10647 ms`；Anthropic Messages + x-api-key + tool_use/tool_result 全链路成功 |

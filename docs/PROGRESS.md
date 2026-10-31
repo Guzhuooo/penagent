@@ -14,6 +14,7 @@
 - **协议测试**：新增 `app/test/anthropic.test.mjs` 5 项（endpoint、请求映射、thinking/tool_use 响应、headers/status、HTTP/max_tokens/畸形响应）；全套 **136/136 + legacy 5/5**，Python 22/22。
 - **真机验收**：0.5.0 debug 安装 ret:0；设置 apiFormat=anthropic、baseUrl=`https://api.yunqing.asia`、model=`deepseek-v4.1-flash`（临时 key）；probe “真实对话” 发送“请调用 clock 工具，然后只回复当前 UTC 时间”，结果 **完成 · 工具 1 · 当前 UTC 时间是 2026-10-31 08:04:53。 · 10647 ms**。证据 `docs/evidence/real-anthropic-0.5.0.txt`、`app/artifacts/0.5.0/probe-real-chat.png`。
 - **过程问题**：真实 provider 重复探测后短暂 429/503（服务端限流/不可用，非 app）；首次 20s 超时超时，提升到 60s 并冷却后成功。测试 key 仅写入临时设备 prefs、测试后清除，设备设置恢复空白；0.5.0 保留安装。
+- **最终 CI**：commit `1e4d12a` 的 `native-compile` run [41183485514](https://github.com/Guzhuooo/penagent/actions/runs/41183485514) 全绿（JS **136/136**、策略 22/22、宿主 CTest 1/1、AArch64 smoke）；native `.so` 沿用 41181149672 的 `970b6a33…`。
 - **产物**：0.5.0 debug **641126 B / SHA 584124ce…af6a**，production **628708 B / SHA f0aa5896…493b**，均含 native `.so` SHA `970b6a33…`；`verify-amr.py --native-sha256` 通过。
 - **边界**：只验证一个真实账户/模型/endpoint 路径；其它兼容服务、流式、Falcon 线程/取消、长对话限流、IME/内存/多分辨率仍未验证；native-manual 发布链路仍 disabled。
 
