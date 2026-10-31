@@ -18,7 +18,7 @@ export default {
 </script>
 <style lang="less" scoped>
 @import "base.less";
-.message { width: @message-inner; margin-left: 3vw; margin-top: 2vh; margin-bottom: 2vh; padding-top: 2vh; padding-bottom: 3vh; flex-direction: column; border-radius: @radius-md; }
+.message { width: @message-inner; min-height: 20vh; margin-left: 3vw; margin-top: 2vh; margin-bottom: 2vh; padding-top: 2vh; padding-bottom: 3vh; flex-direction: column; border-radius: @radius-md; }
 .user { background-color: @bg-muted; }
 .assistant { background-color: @bg-elevated; }
 .role { width: 64vw; margin-left: 2vw; font-size: @font-xs; color: @accent; lines: 1; }

@@ -108,3 +108,74 @@ test('icon data URIs are referenced through the module, never duplicated in temp
     assert.doesNotMatch(readFileSync(path, 'utf8'), /data:image\/png/, path + ' must import assets/icons.js');
   }
 });
+
+// Height family (height/min-height/max-height) must resolve to a vh source: a
+// literal vh number, a calc(...) that only uses vh, or a token imported from
+// app/src/styles/viewport.less whose definition is vh. Width family must
+// resolve to vw the same way. Absolute units, percentages and keyword sizes
+// are rejected for these properties. This is the mechanical guard for the
+// requirement that every component height is written in vh/vw.
+const viewportTokenSource = readFileSync(join(src, 'styles', 'viewport.less'), 'utf8');
+const viewportTokens = new Map([...viewportTokenSource.matchAll(/^\s*@([a-z0-9-]+)\s*:\s*([^;]+);/gm)]
+  .map(match => [match[1], match[2].trim()]));
+const DIMENSION_PROPERTY = /(?:^|[{;]|\s)((?:min-|max-)?(?:height|width))\s*:\s*([^;}]+)/g;
+const ABSOLUTE_OR_FOREIGN_UNIT = /\b(?:px|rpx|wx|pt|em|rem|dp|sp)\b|%/;
+const LITERAL_DIMENSION = /^\d*\.?\d+(?:vw|vh)$/;
+const KEYWORD_DIMENSION = /auto|inherit|initial|unset|fit-content|max-content|min-content/;
+const DIMENSIONLESS_ZERO = /^0$/; // STANDARDS §1.1: zero may be written without a unit
+function styleBlocks(source, path) {
+  if (!path.endsWith('.vue')) return [source];
+  return [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]);
+}
+
+test('every height-family value resolves to vh and every width-family value to vw', () => {
+  for (const [name, value] of viewportTokens) {
+    assert.match(value, /^\d*\.?\d+(?:vw|vh)$/, 'viewport token @' + name + ' must be a vw/vh literal, got ' + value);
+  }
+  let audited = 0;
+  const styleFiles = [...pages, ...components, ...files(join(src, 'styles')).filter(file => file.endsWith('.less'))];
+  for (const path of styleFiles) {
+    for (const block of styleBlocks(readFileSync(path, 'utf8'), path)) {
+      for (const match of block.matchAll(new RegExp(DIMENSION_PROPERTY.source, 'g'))) {
+        const property = match[1];
+        const value = match[2].trim();
+        const unit = property.endsWith('height') ? 'vh' : 'vw';
+        const label = path + ' ' + property + ': ' + value;
+        audited += 1;
+        assert.doesNotMatch(value, KEYWORD_DIMENSION, label + ' must not be a keyword size');
+        if (DIMENSIONLESS_ZERO.test(value)) continue;
+        if (value.startsWith('@')) {
+          const token = value.slice(1);
+          assert.ok(viewportTokens.has(token), label + ' must reference a viewport.less token');
+          assert.ok(viewportTokens.get(token).endsWith(unit), label + ' token @' + token + ' must be defined in ' + unit);
+          continue;
+        }
+        assert.doesNotMatch(value, ABSOLUTE_OR_FOREIGN_UNIT, label + ' must not use absolute or foreign units');
+        if (value.startsWith('calc(')) {
+          const units = [...value.matchAll(/\d(vw|vh)\b/g)].map(item => item[1]);
+          assert.ok(units.length > 0 && units.every(item => item === unit), label + ' calc must only use ' + unit);
+          continue;
+        }
+        assert.match(value, LITERAL_DIMENSION, label + ' must be a literal vh/vw value');
+        assert.ok(value.endsWith(unit), label + ' must use ' + unit);
+      }
+    }
+  }
+  assert.ok(audited > 80, 'expected to audit every dimension declaration, audited ' + audited);
+});
+
+test('every page and component root declares a vw width and a vh height or min-height', () => {
+  for (const path of [...pages, ...components]) {
+    const source = readFileSync(path, 'utf8');
+    const template = source.match(/<template>([\s\S]*?)<\/template>/);
+    assert.ok(template, path + ' needs a template block');
+    const rootTag = template[1].match(/^\s*<([a-z][a-z0-9-]*)\b([^>]*)>/);
+    assert.ok(rootTag, path + ' needs a root element');
+    const className = rootTag[2].match(/\sclass="([a-z][a-z-]*)"/);
+    assert.ok(className, path + ' root element needs one static class');
+    const rule = source.match(new RegExp('\\.' + className[1] + '\\s*\\{([^}]+)\\}'));
+    assert.ok(rule, path + ' root class .' + className[1] + ' needs a style rule');
+    assert.match(rule[1], /(?:^|;)\s*width\s*:/, path + ' root must declare width in vw');
+    assert.match(rule[1], /(?:^|;)\s*(?:min-)?height\s*:/, path + ' root must declare height or min-height in vh');
+  }
+});

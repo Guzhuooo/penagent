@@ -20,7 +20,7 @@ export default {
 </script>
 <style lang="less" scoped>
 @import "base.less";
-.card { width: @message-inner; margin-left: 3vw; margin-top: 2vh; padding-top: 2vh; padding-bottom: 3vh; flex-direction: column; background-color: @bg-muted; border-radius: @radius-sm; border-left-width: @stroke; border-left-color: @brand; }
+.card { width: @message-inner; min-height: 14vh; margin-left: 3vw; margin-top: 2vh; padding-top: 2vh; padding-bottom: 3vh; flex-direction: column; background-color: @bg-muted; border-radius: @radius-sm; border-left-width: @stroke; border-left-color: @brand; }
 .heading { width: 64vw; margin-left: 2vw; flex-direction: row; align-items: center; }
 .name { width: 44vw; font-size: @font-sm; color: @accent; lines: 1; }
 .state { width: 20vw; font-size: @font-xs; color: @text-secondary; lines: 1; }

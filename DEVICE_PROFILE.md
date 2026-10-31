@@ -23,15 +23,22 @@
 |---|---|
 | 架构 | `aarch64`（EM_AARCH64=183），小端，**64 位** |
 | 运行时进程 | `/usr/bin/miniapp`（PID 216，ELF64 aarch64） |
-| libc | glibc（`libc.so.6`，符号版本 GLIBC_2.17+） |
-| C++ | `libstdc++.so.6.0.29` |
+| libc | glibc（`libc.so.6`，Buildroot stable release **2.36**；最高符号 `GLIBC_2.36`） |
+| C++ | `libstdc++.so.6.0.29`（`GLIBCXX` 最高 **3.4.29**） |
+| curl | `/lib/libcurl.so.4.7.0`，curl **7.79.1**（OpenSSL 1.1.1l、zlib 1.2.11、c-ares 1.18.1、libidn2、libpsl、librtmp） |
+| 动态加载器 | `/lib/ld-linux-aarch64.so.1`（178,104 B） |
 | 渲染引擎 | `/usr/lib/libfalcon.so`（10,559,696 B，aarch64） |
 | JS 引擎 | `/usr/lib/libquickjs.so`（952,192 B），QuickJS `20200705` |
 | js-framework | `0.0.32`，build 2021-10-28，Vue `2.6.12` |
 | 设备端编译器 | **无**（无 gcc/cc/make/cmake） |
-| 宿主机交叉工具链 | **无**（无 aarch64-gcc / clang / 可用 WSL） |
+| 宿主机交叉工具链 | **无**（无 aarch64-gcc / clang / 可用 WSL）；native 只允许在 GitHub Actions 构建 |
+| 设备 sysroot 来源 | 运行时库从上述真机路径采集（libc/loader/libm/pthread/dl/rt/libgcc_s/libstdc++/libcurl + curl 的 DT_NEEDED 依赖），curl 7.79.1 头文件由对应源码归档补齐；详见 `native/device-bundle/` 与 `native/README.md` |
+| 目标 ABI 下限 | 2018-era GNU/AArch64 工具链（glibc ≤2.36、GLIBCXX ≤3.4.29）即可；链接产物须由 Actions ELF 审计 |
 
-> [注意] **native 结论**：本机无法交叉编译 aarch64 `.so`。任何"自定义 native JSAPI"方案都需要先解决工具链，否则不可交付。
+> [注意] **native 结论**：本机无交叉工具链、设备也无编译器；所有 C/C++ 构建只在 GitHub Actions。
+> 目标机 glibc 2.36 / libstdc++ 6.0.29 / curl 7.79.1 已实测；Actions 使用 2018-era AArch64 工具链 +
+> 真机采集的 sysroot bundle，产物必须通过 ELF64/AArch64、SONAME、DT_NEEDED、GLIBC/GLIBCXX 上限审计，
+> 且仍需真机加载/TLS/取消验证才能声称可用。
 
 ## 3. 屏幕与输入
 
