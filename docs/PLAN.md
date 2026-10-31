@@ -127,6 +127,27 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 - 真机证据（Y02 / 4.9.7 / ADB）：工作区自检 ok=true（9 步）；开发模式 AI 测试由 LAN 合成 mock 驱动 3 次模型请求 / 5 次工具调用，最终 keep.txt 留存、ai.txt 删除，状态 completed。证据见 `docs/evidence/workspace-device-0.3.0.txt` 与 `docs/WORKSPACE_TOOLS.md`。
 - 未通过：真实 endpoint 生产对话、生产安全 adapter、TLS/redirect/status 的生产级验收；native `.so` 仍依赖 GitHub Actions 的获批 toolchain/sysroot bundle，本轮无设备 `.so`。
 
+### 2.7 0.3.1 组件高度单位与 native 2018 工具链 + 真机 sysroot
+
+用户 2026-10-31 追加要求：组件高度全部 vh/vw；vendor toolchain 用 aarch64、尽量 2018 工具链；glibc
+从真机确认；sysroot bundle 从真机采集；SDK 用 `iot-miniapp-sdk.zip`。
+
+- UI：12 个样式文件 154 条尺寸声明全部已是 vh/vw 或 viewport token；补两个内容高度组件根的
+  vh min-height；source-contract 增加严格门禁（height 家族必须 vh 源、width 家族必须 vw 源、根节点
+  必须声明宽高），测试 126/126 + 5/5 全绿。0.3.1 两包构建/校验通过并真机安装截图。
+- 真机 ABI：glibc 2.36、libstdc++ 6.0.29（GLIBCXX 3.4.29）、curl 7.79.1、aarch64 LE、loader
+  `/lib/ld-linux-aarch64.so.1`。sysroot bundle 由 ADB 采集并按设备 `sha256sum` 交叉校验（25/25），
+  含 SDK、curl 7.79.1 headers、24 个设备运行库闭包、libfalcon.so、manifest/provenance。
+- 工具链：GitHub Actions 内 `ubuntu:18.04` 容器 + GCC 7.5.0 AArch64 cross + cmake 3.18.4 +
+  glibc 2.27 dev headers；容器 sysroot = 工具链 dev 文件 ∪ 设备库覆盖（设备同名库优先）。
+  `.github/workflows/native-device-build.yml` 构建插件并做 fail-closed ELF/ABI 审计。
+- 结果：`libjsapi_httpx.so` 488,520 B / SHA-256 `22d4e811…4fcf5cd`，两次 run SHA 一致；
+  ELF64 LE AArch64 DYN、SONAME 正确、无 PT_INTERP/RPATH/RUNPATH/TEXTREL、导出
+  `custom_init_jsapis`、DT_NEEDED 与设备 provider SHA/SONAME 匹配、所需版本符号 ≤ 设备上限。
+- 边界：`.so` 未打进 AMR、未在真机加载，不声称加载/TLS/取消/运行时兼容；`native-manual.yml` +
+  `ci-policy.json` 保持 disabled，正式发布仍需获批 vendor bundle。详见
+  `docs/VALIDATION.md`、`native/README.md`、`docs/evidence/ci-native-0.3.0/`。
+
 ## 3. 里程碑与出口
 
 | 里程碑 | 内容 | 出口判据与当前状态 |
@@ -138,6 +159,7 @@ profile 当前不复制 APPID / APP_NAME，入口为 `index`，无 DOUYIN_* 或�
 | M3 五工具与有限循环 | registry、五类工具、JSON schema/IDs、原子组裁剪、预算、tool-call UI | 纯逻辑测试含坏参数 / 重复ID / 禁用工具 / 上限 / 取消 / 整组裁剪；真机工具调用，多个结果准确关联；calculator 禁 eval |
 | M4 execShell + 历史持久化 | 预设只读执行器、关闭开关、审计；会话列表、分块历史、可靠串行保存 | 注入拒绝与正确 quoting、关闭/允许用例；不伪造 stdout / 取消；重启读回、断写恢复、连续保存不乱序；两次进出无累积 |
 | M6 自造工具 / 识别 / 工作区文件执行（0.3.0 新增） | recipe 元工具、pa.customTools、动态 registry、工具识别、file_* 工具、工作区适配器、设置开关、开发模式 curl 传输、工具/工作区页面 | 0.3.0 宿主 121/121 + legacy 5/5 + Python 22/22；Y02 真机安装、自检 9 步 ok、开发模式 AI 文件测试 completed（keep.txt 留存 / ai.txt 删除）；真实 endpoint 与生产安全 network adapter 仍未通过 |
+| M7 组件高度门禁 + native 2018 工具链/真机 sysroot（0.3.1 新增） | 154 条尺寸声明审计与严格 source-contract 门禁；0.3.1 AMR；真机采集 sysroot bundle；ubuntu:18.04 GCC 7.5.0 AArch64 交叉工具链；Actions 构建 + ELF/ABI 审计 | 0.3.1 宿主 126/126 + 5/5 + Python 22/22；两包构建/校验/真机安装；native run 41179283105/41179509958 绿，`.so` 488,520 B / SHA 22d4e811…，静态审计通过；未打进 AMR/未真机加载，发布链路仍需获批 vendor bundle |
 | M5 验收交付 | STANDARDS §13 完整矩阵、版本递增、AMR / 可选 `.so` SHA、逐步日志与限制说明 | 声明支持的功能/profile 对应证据齐全；未测能力明确标注，不把 mock 当真机。GitHub 发布仅在具体仓库授权内执行 |
 
 M1 的纯展示 / mock 与 M0 待办可并行；M2 生产真机 LLM 依赖 M0.5 安全通道完整通过，flat JSON POST 即使送达也不解锁。M3 纯逻辑可先用 mock，真机闭环依赖 M2。M4 依赖 M1 存储边界和 M3 参数 / 权限；M5 不能跳过 R06→R07 修复的 R08 最终集成回归及任何未关闭门槛。

@@ -2,17 +2,17 @@
 
 运行于有道词典笔 Falcon / QuickJS 的轻量 OpenAI-compatible agent harness。
 
-**当前为 0.3.0 集成预览。** 聊天、设置、会话存储、有界工具循环、声明式自造工具、工具识别、
-工作区文件编辑/删除/执行均已有实现与宿主测试；Y02 真机已完成 0.3.0 安装、工作区自检与
+**当前为 0.3.1 集成预览。** 聊天、设置、会话存储、有界工具循环、声明式自造工具、工具识别、
+工作区文件编辑/删除/执行均已有实现与宿主测试；Y02 真机已完成 0.3.1 安装、工作区自检与
 开发模式 AI 文件工具闭环。生产真实 endpoint 仍未解锁：已识别 flat `http.request` 静态不合格
 （关闭 TLS peer/hostname 校验、自动 redirect、无真实 HTTP status、无 caller timeout/signal），
 生产保持 fail closed，需要 native 或另一条独立验证的安全 adapter。开发模式额外提供 curl
 传输，只允许回环/私网 + 合成 key，不能用于生产。详细边界见 [验证状态](docs/VALIDATION.md)。
 
-## 已实现（0.3.0）
+## 已实现（0.3.1）
 
 - Vue 2 页面：会话列表、聊天、发送/停止、工具状态卡、设置、能力探针、工具目录/识别、文件工作区。
-- 全部 UI 几何使用 vw/vh；状态图标改为内联 PNG 或文字，不再依赖 emoji/状态符号字体。
+- 全部 UI 几何使用 vw/vh；组件高度严格审计为 vh（宽度 vw），状态图标改为内联 PNG 或文字，不再依赖 emoji/状态符号字体；source-contract 回归测试守护。
 - API 根、密钥、模型配置；密钥遮罩、默认内存、明文保存须确认、清除读回验证。
 - OpenAI 兼容非流式 `/chat/completions`；单次 POST、无自动重试；工具组原子提交、上下文裁剪、
   取消与迟到回调隔离。
@@ -36,16 +36,16 @@ npm --prefix app test
 npm --prefix app run check
 npm --prefix app run build       # debug QuickJS AMR
 npm --prefix app run build:prod  # production 构建模式 AMR（未解锁生产网络）
-python tools/verify-amr.py app/artifacts/0.3.0/penagent-0.3.0-debug.amr
+python tools/verify-amr.py app/artifacts/0.3.1/penagent-0.3.1-debug.amr
 python -m unittest discover -s tools/tests -v
 ```
 
-- 最终 0.3.0 验证：legacy **5/5** + Node **124/124**、Python 策略 **22/22**，0 fail。
+- 最终 0.3.1 验证：legacy **5/5** + Node **126/126**、Python 策略 **22/22**，0 fail。
 - `check` 是 CLI 环境检查，不是源码 lint；CLI 仍会报告缺省 theme、runtime 外部模块等警告。
-- 发布身份来自 `app/package.json`：version `0.3.0`、appid `8002026100700001`、入口 `index`。
+- 发布身份来自 `app/package.json`：version `0.3.1`、appid `8002026100700001`、入口 `index`。
 - 预览产物（SHA/字节见 [VALIDATION](docs/VALIDATION.md)）：
-  [debug AMR](app/artifacts/0.3.0/penagent-0.3.0-debug.amr)、
-  [production 构建模式 AMR](app/artifacts/0.3.0/penagent-0.3.0-production.amr)。
+  [debug AMR](app/artifacts/0.3.1/penagent-0.3.1-debug.amr)、
+  [production 构建模式 AMR](app/artifacts/0.3.1/penagent-0.3.1-production.amr)。
 - production 只是 CLI 构建模式，不是生产使用许可；两个包都未验证真实 endpoint 对话。
 
 ## 合成 mock / 开发模式
@@ -69,8 +69,8 @@ file_write/file_delete 五调用，用于工作区闭环。
 
 ```sh
 adb devices -l
-adb push D:/penagent/app/artifacts/0.3.0/penagent-0.3.0-debug.amr /tmp/penagent-0.3.0.amr
-adb shell miniapp_cli install /tmp/penagent-0.3.0.amr
+adb push D:/penagent/app/artifacts/0.3.1/penagent-0.3.1-debug.amr /tmp/penagent-0.3.1.amr
+adb shell miniapp_cli install /tmp/penagent-0.3.1.amr
 adb shell miniapp_cli start 8002026100700001 index
 ```
 
@@ -80,30 +80,46 @@ adb shell miniapp_cli start 8002026100700001 index
 
 ## GitHub Actions / Native
 
-仓库：`Guzhuooo/penagent`（private）。`.github/workflows/native-compile.yml` 在 GitHub-hosted
-ubuntu-24.04 上执行：JS 测试、Python 策略测试、宿主 C++ CMake build + CTest、AArch64
-compile-only 冒烟（不链接、不执行、不生成 `.so`）。所有 C/C++ 编译都只在 Actions，本机未执行
-任何 configure/compile/link/CTest。
+仓库：`Guzhuooo/penagent`（private）。两条 workflow：
 
-- 最近证据：`docs/evidence/ci-native-0.3.0/`。最终 0.3.0 源码 commit `bc01903` 的 run
-  [41175666914](https://github.com/Guzhuooo/penagent/actions/runs/41175666914) 全绿：
-  JS **124/124**、策略 22/22、宿主 CTest **1/1**、AArch64 目标文件 ELF64/AArch64。更早
-  40168576908 / 40168752041 / 40169416478 亦为绿。同一 commit 的 push run 因并发被取消
-  （cancelled，非失败）。
-- 设备 `.so` 交付仍阻塞：需要获批的 vendor toolchain/sysroot bundle；`native/ci-policy.json`
-  保持 disabled，`native-manual.yml` 不启用。无 CI 设备产物、ELF/SHA、真机加载与 TLS 证据，
-  不声称可用 `.so`。
-- 配置与 ABI/ELF/取消/TLS 验收说明见 [native/README.md](native/README.md)。
+- `native-compile.yml`：ubuntu-24.04 上跑 JS 测试、Python 策略测试、宿主 C++ CMake build +
+  CTest、AArch64 compile-only 冒烟。所有 C/C++ 编译只在 Actions。
+- `native-device-build.yml`（0.3.1 新增）：在 ubuntu:18.04 容器里用 **2018 年 GCC 7.5.0
+  AArch64 交叉工具链** + 从真机采集的 sysroot bundle（SDK + curl 7.79.1 headers + 24 个设备
+  运行库 + libfalcon.so）构建 `libjsapi_httpx.so`，并在宿主做 fail-closed ELF/ABI 审计。
+
+最近证据：
+
+- 最终 0.3.1 源码 commit `58f5bc9` 的 native device build run
+  [41179509958](https://github.com/Guzhuooo/penagent/actions/runs/41179509958) 全绿；
+  artifact `libjsapi_httpx.so` **488,520 bytes**，SHA-256
+  `22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd`；
+  ELF64 little-endian AArch64 DYN，SONAME `libjsapi_httpx.so`，无 PT_INTERP/RPATH/RUNPATH/TEXTREL，
+  导出 `custom_init_jsapis`；DT_NEEDED 对 libcurl.so.4 / libstdc++.so.6 / libgcc_s.so.1 /
+  libc.so.6 / ld-linux-aarch64.so.1 的设备 provider SHA/SONAME 匹配；所需版本符号
+  GLIBC_2.17 ≤ 2.36、GLIBCXX_3.4.21 ≤ 3.4.29、CXXABI_1.3.9 ≤ 1.3.13、GCC_3.0 ≤ GCC_11.0。
+- 同一 commit 的 `native-compile` run
+  [41179510006](https://github.com/Guzhuooo/penagent/actions/runs/41179510006) 全绿（JS 126/126、
+  策略 22/22、宿主 CTest 1/1、AArch64 compile-only）。
+- 设备工具链/系统库：Y02 实机 glibc **2.36**、libstdc++ **6.0.29**（GLIBCXX 3.4.29）、
+  curl **7.79.1**；sysroot/bundle 的来源、文件 SHA 与 adb 采集命令见
+  [native/README.md](native/README.md) 与 `native/device-bundle/manifest.json`。
+- **边界**：该 `.so` 尚未打进 AMR、尚未在设备加载，不声称设备加载、TLS 信任链、取消语义或
+  Falcon 线程兼容；`native-manual.yml` + `native/ci-policy.json` 仍保持 disabled，正式发布
+  链路仍需获批 vendor bundle。`.gitignore` 忽略 `*.so`，二进制只在 Actions artifact（30 天），
+  文本证据与 SHA 入库。
 
 ## 文档与验收边界
 
 - [总规划](docs/PLAN.md) · [技术标准](docs/STANDARDS.md) · [逐步记录](docs/PROGRESS.md)
 - [自造工具与识别](docs/CUSTOM_TOOLS.md) · [工作区文件与执行](docs/WORKSPACE_TOOLS.md)
 - [探针与更正](docs/SPIKE_REPORT.md) · [设备画像](DEVICE_PROFILE.md) · [探测记录](DEVICE_PROBING.md)
-- [核心 adapter 合同](app/src/core/README.md) · [最新验证](docs/VALIDATION.md)
+- [核心 adapter 合同](app/src/core/README.md) · [最新验证](docs/VALIDATION.md) ·
+  [native 构建说明](native/README.md)
 
-0.3.0 已真机验证：安装、工作区自检 9 步、开发模式 AI 文件工具闭环（写入/读取/执行/删除）。
+0.3.1 已真机验证：安装、工作区自检 9 步、开发模式 AI 文件工具闭环（写入/读取/执行/删除）、
+UI 高度 vh/vw 回归测试；native 插件已在 Actions 用 2018 工具链 + 真机 sysroot 构建并通过静态审计。
 仍未验证 / 未通过：真实 endpoint 对话、生产安全 adapter、IME 取消/重复开关、两次进出内存差值、
-多分辨率、native `.so` 构建与加载。`file_exec` 是高风险能力，默认关闭；开启后 AI 可执行工作区
-命令，用户需自行承担风险。`DEVICE_*`、profiles、截图、SDK 和本地运行数据包含设备/许可相关
-信息，不能把整个目录直接公开发布；公开/私有远程操作均须具体授权。
+多分辨率、native `.so` 打进 AMR 与真机加载。`file_exec` 是高风险能力，默认关闭；开启后 AI 可
+执行工作区命令，用户需自行承担风险。`DEVICE_*`、profiles、截图、SDK 和本地运行数据包含
+设备/许可相关信息，不能把整个目录直接公开发布；公开/私有远程操作均须具体授权。

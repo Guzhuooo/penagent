@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-10-31 · 0.3.1：UI 高度 vh/vw 审计、真机 sysroot + 2018 工具链 native 构建
+
+### R10 · 组件高度门禁与 native device build
+- **用户要求**：所有组件高度改为 vh/vw；vendor toolchain 用 aarch64、尽量 2018 年工具链；glibc 去真机确认；sysroot bundle 从真机找；SDK 为 `D:\penagent\iot-miniapp-sdk.zip`。
+- **真机 ABI 确认（ADB <device-serial>）**：glibc **2.36**（Buildroot stable release，最高 GLIBC_2.36）、libstdc++.so.6.0.29（GLIBCXX 3.4.29 / CXXABI 1.3.13）、curl 7.79.1 / libcurl.so.4.7.0（OpenSSL 1.1.1l、zlib、c-ares 等）、`/lib/ld-linux-aarch64.so.1`。已回填 `DEVICE_PROFILE.md`。
+- **UI 高度审计**：12 个 UI 样式文件、154 条 height/width 声明全部已是 vh/vw 字面量或 viewport token，无单位违规；为纯内容高度组件根补 vh 下限（`message-card .message min-height:20vh`、`tool-card .card min-height:14vh`，不截断文字）。`source-contract.test.mjs` 新增两条硬门禁：height 家族必须 vh 源（字面量/calc/token 定义）、width 家族必须 vw 源，禁 px/%/em/rem/auto；每个 page/component 根必须声明 vw 宽 + vh 高/下限。反向注入 10px/100%/vw-token 当高度均被测试拦下。测试 124→**126/126** + legacy 5/5。
+- **0.3.1 包与真机**：`app/package.json` 0.3.1；`build` / `build:prod` 均成功，`verify-amr.py` 两包通过（10 资源、无 `.so`）。debug **455270 B / SHA-256 fa94045042d8d90107eed90fe574bcc124800e979c90bd3cb4b06cea641764bd**；production **443732 B / SHA-256 c4082f0908447b287403243a322f59c899816f11a7719922c31757626a02c79d**。Y02 干净卸载/安装 0.3.1 debug ret:0，chat/settings/workspace 截图正常，workspace 自检仍通过。日志 `docs/evidence/build-*-0.3.1.txt`、`amr-*-0.3.1.json`、`js-tests-0.3.1.txt`、`ci-policy-tests-0.3.1.txt`；截图 `app/artifacts/0.3.1/`。
+- **真机 sysroot bundle**：`native/device-bundle/device-bundle.tar.xz`（7,284,740 B，SHA-256 `001ec916cd6810e79752c08f72620efecab396a961fa17dcfae798805acf4f81`）由 ADB 从真机采集并经设备自身 `sha256sum` 交叉校验（25/25）：SDK（用户 zip SHA `564af74…`，SDK tree hash 入 manifest）、curl 7.79.1 headers（curl.se 源码 tarball SHA `370b1120…`，curlver.h `0x074f01`）、24 个设备运行库（含 libcurl DT_NEEDED 闭包）、libfalcon.so、provenance 与 manifest；`build_bundle.py` 可重建。
+- **2018 工具链构建（只在 Actions）**：`ubuntu:18.04` 容器（digest 记录在 run 证据）内 `aarch64-linux-gnu-g++` **GCC 7.5.0**（Ubuntu/Linaro）、binutils 2.30、cmake 3.18.4（pip，bionic 自带 3.10 过旧）、glibc 2.27 dev headers；sysroot = 工具链 dev 文件 ∪ 设备库覆盖（设备库同名覆盖）。`native/cmake/toolchain-aarch64-linux-gnu-2018.cmake`、`device-build-2018.sh`、`audit_device_elf.py` 与 `.github/workflows/native-device-build.yml` 新增。CMake 的 `HTTPX_SYSROOT` 在 try_compile 子项目丢失、audit dynsym 列解析、ld-linux 无 SONAME、容器 root 拥有输出文件等失败均已逐项修复。
+- **native 产物/审计**：run [41179283105](https://github.com/Guzhuooo/penagent/actions/runs/41179283105) @82783bb 首绿，[41179509958](https://github.com/Guzhuooo/penagent/actions/runs/41179509958) @58f5bc9 可复现（`.so` SHA 相同）。`libjsapi_httpx.so` **488,520 B / SHA-256 22d4e811dd8bb003a86c0c492f04875803637aa8a3f1f3eb1a4aec7544fcf5cd**；ELF64 LE AArch64 DYN、SONAME `libjsapi_httpx.so`、导出 `custom_init_jsapis`、无 PT_INTERP/RPATH/RUNPATH/TEXTREL；DT_NEEDED `libcurl.so.4, libstdc++.so.6, libgcc_s.so.1, libc.so.6, ld-linux-aarch64.so.1` 均对应 bundle 设备 provider 的 SHA/SONAME；版本符号 ≤ 设备上限（GLIBC_2.17≤2.36、GLIBCXX_3.4.21≤3.4.29、CXXABI_1.3.9≤1.3.13、GCC_3.0≤GCC_11.0）。`.so` 未入仓（`.gitignore`），只在 Actions artifact（30 天）；文本报告在 `docs/evidence/ci-native-0.3.0/native-device-run-*/`。
+- **最终 CI**：commit `58f5bc9` 的 `native-compile` run [41179510006](https://github.com/Guzhuooo/penagent/actions/runs/41179510006) 全绿（JS **126/126**、策略 22/22、宿主 CTest 1/1、AArch64 compile-only）；`native-device-build` run 41179509958 全绿。文档 commit `dd50cb2` 仅证据/README，不触发代码构建。
+- **仍未关闭 / 边界**：native `.so` 未打进 AMR、未在真机加载，不声称加载/TLS/取消/Falcon 线程/运行时兼容；`native-manual.yml` + `ci-policy.json` 保持 disabled，正式发布仍需获批 vendor bundle。真实 endpoint、生产安全 adapter、IME、内存、多分辨率仍未通过。
+- **提交**：UI 0.3.1 `8020d8f`；native bundle/workflow/修复 `1575d53…58f5bc9`；证据 `dd50cb2`。本轮 commit 后最终文档更新为 R10 记录。
+
+---
+
 ## 2026-10-31 · 0.3.0：emoji/图标、自造工具、工作区文件执行与设备验收
 
 ### R09 · 恢复现场、AI 文件工具闭环与最终预览包

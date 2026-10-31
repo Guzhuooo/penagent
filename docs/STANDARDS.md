@@ -51,6 +51,7 @@
 - 两种以上逻辑分辨率 / 比例验证字号、换行、触控热区、scroller 和错误状态，不只拉伸截图。模拟 / mock 结果标为模拟证据；每个声明支持的真实 profile 都要独立真机验证。
 - 936×280、vw/vh 单位语义的既有 Y02 证据不能证明多分辨率兼容。多分辨率验证当前待完成。
 - 采集截图、读取 PNG 尺寸、capture ret:0 或页面挂载日志不等于视觉验收。未经具备视觉能力的查看者实际核验，不得声称比例正确、无裁切 / 重叠、可读性或布局通过；须记录视觉未验，触控结果另取交互证据。
+- height / min-height / max-height 必须解析为 vh（字面量、calc 或 viewport.less 中定义为 vh 的 token）；width 家族同理解析为 vw。禁止 px/%/em/rem/auto 等。每个 page/component 根节点必须显式声明 vw 宽与 vh 高或下限；`source-contract.test.mjs` 是强制门禁，新增页面必须通过。
 
 ## 2. 分层与依赖
 
@@ -198,6 +199,14 @@ execShell 默认关闭，启用也只能调用**项目预设的只读操作**。
 - CI 对产物运行 file、readelf -h/-l/-d/--version-info、nm -D；确认 ELF class/machine/endian、依赖 / RPATH、所需 GLIBC / GLIBCXX 不高于目标、入口符号。共享库通常无 PT_INTERP；附带 executable 则校验 loader。与目标可用符号逐项比对，不能仅凭「GLIBC_2.17+」推断兼容。
 - artifact 必须带 SHA-256、构建日志和 profile / source revision；下载后、进入 AMR 前、AMR 解包后复核 `.so` SHA 一致。CI 通过后仍需真机加载日志和全部导出功能 / 错误 / 取消 / TLS 测试；看到别的应用 aarch64 `.so` 不能替代。
 - 发布源码、SDK / sysroot、推送 workflow、创建 repo、触发远程构建或 release 前，须有用户对**具体 owner/repo 及可见性 / 上传范围**的授权。采用 GitHub Actions 的决策不等于任意仓库发布授权；未获授权可先准备可审查配置，不上传 SDK、凭据或设备数据。
+
+### 11.1 真机 sysroot + 2018 工具链（0.3.1）
+
+- 允许从目标真机采集 sysroot：必须归档为单一不可变 artifact，带 manifest（profile、glibc/libstdc++/curl 版本、每文件 SHA-256、设备路径与 adb 命令），并与设备自身 `sha256sum` 交叉校验；禁止把散落 `.so` 直接提交仓库，禁止混用其他机型/固件的库。
+- 工具链必须显式锁定：0.3.1 使用 ubuntu:18.04 容器 + GCC 7.5.0 AArch64 cross（2018-era）、binutils 2.30、glibc 2.27 dev headers、cmake 3.18.4；容器 image 记录 tag+digest，禁止使用 runner 自动选择的编译器或宿主库。
+- 构建 sysroot = 工具链 dev 文件 ∪ 设备库覆盖；设备同名库优先，curl 头文件必须精确匹配设备 7.79.1（curlver.h 0x074f01）；所有链接/ELF 检查只在 Actions。
+- 产物必须通过 fail-closed 静态审计：ELF64 LE AArch64 DYN、SONAME、`custom_init_jsapis` 导出、无 PT_INTERP/RPATH/RUNPATH/TEXTREL、DT_NEEDED 每项对应设备 provider SHA/SONAME、GLIBC/GLIBCXX/CXXABI/GCC 需求 ≤ 设备最大值。静态审计通过不等于设备加载/TLS/取消/线程兼容，必须继续真机验证。
+- `native-manual.yml` + `ci-policy.json` 的正式发布通道保持 disabled，直到具体 vendor bundle 与 artifact 披露范围获批；从真机自采 bundle 构建出的 `.so` 未打进 AMR/未加载前不得声称可用 native。
 
 ## 12. 构建、包与安装
 
