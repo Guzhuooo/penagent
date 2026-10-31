@@ -2,15 +2,15 @@
 
 运行于有道词典笔 Falcon / QuickJS 的轻量 OpenAI-compatible agent harness。
 
-**当前为 0.6.0 可用预览。** 聊天、设置、会话存储、长工具循环、声明式自造工具、工具识别、
-工作区文件编辑/删除/执行均已有实现与宿主测试；Y02 真机已完成 0.6.0 安装、工作区自检与
+**当前为 0.6.1 可用预览。** 聊天、设置、会话存储、长工具循环、声明式自造工具、工具识别、
+工作区文件编辑/删除/执行均已有实现与宿主测试；Y02 真机已完成 0.6.1 安装、工作区自检与
 AI 文件工具闭环。生产 transport 已切到 native `httpx`（TLS peer/hostname 校验、禁 redirect、
 真实状态、60s 时限、cancelAll），并新增 **Anthropic Messages** 格式；真机已用真实
 `https://api.yunqing.asia` + `deepseek-v4.1-flash` 完成对话与 clock 工具调用。OpenAI 兼容
 服务仍可用；其它服务/账户未逐一验证。开发模式额外提供 curl 传输，只允许回环/私网 + 合成 key，
 不能用于生产。详细边界见 [验证状态](docs/VALIDATION.md)。
 
-## 已实现（0.6.0）
+## 已实现（0.6.1）
 
 - Vue 2 页面：会话列表、聊天、发送/停止、工具状态卡、设置、能力探针、工具目录/识别、文件工作区。
 - 全部 UI 几何使用 vw/vh；组件高度严格审计为 vh（宽度 vw），状态图标改为内联 PNG 或文字，不再依赖 emoji/状态符号字体；source-contract 回归测试守护。
@@ -26,7 +26,7 @@ AI 文件工具闭环。生产 transport 已切到 native `httpx`（TLS peer/hos
   [WORKSPACE_TOOLS](docs/WORKSPACE_TOOLS.md)。
 - 网络：native `httpx` transport（TLS peer/hostname 校验、禁 redirect、真实状态、60s 期限与 cancelAll）；`.so` 打入 AMR，真机原生 HTTPS POST 200 / 过期证书 TLS_ERROR 已验。
 - 双 API 格式：`apiFormat=openai`（默认）或 `anthropic`；Anthropic Messages 自动转 tool_use/tool_result，真机已用 `https://api.yunqing.asia` + `deepseek-v4.1-flash` 完成真实对话 + clock 工具闭环。
-- API key 每次输入自动保存在本机（更新设置不会丢 key，只有“清除密钥”会删除）。
+- API key 每次输入自动保存在本机（更新设置不会丢 key，只有“清除密钥”会删除）；支持从 /tmp 或工作区 `import/config.json` 文件导入 Claude/DeepSeek harness 配置，见 [IMPORT](docs/IMPORT.md)。
 - 取消业务循环限额：不再有 6 次模型/24 次工具/8 个批量/240s 的硬停止；保留单次请求 60s 与响应/存储字节上限作为设备安全边界。
 - 系统提示词注入；思考过程/工具调用可折叠；Markdown 轻量转纯文本显示。
 - 插件规范 `penagent-plugin/1`：应用本体安装后，把插件 JSON 放入工作区 `plugins/`，工具页“重新加载插件”热加载；见 [PLUGINS](docs/PLUGINS.md)。
@@ -43,16 +43,16 @@ npm --prefix app test
 npm --prefix app run check
 npm --prefix app run build       # debug QuickJS AMR
 npm --prefix app run build:prod  # production 构建模式 AMR（未解锁生产网络）
-python tools/verify-amr.py app/artifacts/0.6.0/penagent-0.6.0-debug.amr --native-sha256 970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6
+python tools/verify-amr.py app/artifacts/0.6.1/penagent-0.6.1-debug.amr --native-sha256 970b6a33bc568016d35291193f181af562963f76bdfe1af34d97022d4d10b4a6
 python -m unittest discover -s tools/tests -v
 ```
 
-- 最终 0.6.0 验证：legacy **5/5** + Node **141/141**、Python 策略 **22/22**，0 fail。
+- 最终 0.6.1 验证：legacy **5/5** + Node **144/144**、Python 策略 **22/22**，0 fail。
 - `check` 是 CLI 环境检查，不是源码 lint；CLI 仍会报告缺省 theme、runtime 外部模块等警告。
-- 发布身份来自 `app/package.json`：version `0.6.0`、appid `8002026100700001`、入口 `index`。
+- 发布身份来自 `app/package.json`：version `0.6.1`、appid `8002026100700001`、入口 `index`。
 - 预览产物（SHA/字节见 [VALIDATION](docs/VALIDATION.md)）：
-  [debug AMR](app/artifacts/0.6.0/penagent-0.6.0-debug.amr)、
-  [production 构建模式 AMR](app/artifacts/0.6.0/penagent-0.6.0-production.amr)。
+  [debug AMR](app/artifacts/0.6.1/penagent-0.6.1-debug.amr)、
+  [production 构建模式 AMR](app/artifacts/0.6.1/penagent-0.6.1-production.amr)。
 - production 只是 CLI 构建模式，不是生产使用许可；两个包都未验证真实 endpoint 对话。
 
 ## 合成 mock / 开发模式
@@ -76,8 +76,8 @@ file_write/file_delete 五调用，用于工作区闭环。
 
 ```sh
 adb devices -l
-adb push D:/penagent/app/artifacts/0.6.0/penagent-0.6.0-debug.amr /tmp/penagent-0.6.0.amr
-adb shell miniapp_cli install /tmp/penagent-0.6.0.amr
+adb push D:/penagent/app/artifacts/0.6.1/penagent-0.6.1-debug.amr /tmp/penagent-0.6.1.amr
+adb shell miniapp_cli install /tmp/penagent-0.6.1.amr
 adb shell miniapp_cli start 8002026100700001 index
 ```
 
@@ -120,12 +120,12 @@ adb shell miniapp_cli start 8002026100700001 index
 ## 文档与验收边界
 
 - [总规划](docs/PLAN.md) · [技术标准](docs/STANDARDS.md) · [逐步记录](docs/PROGRESS.md)
-- [自造工具与识别](docs/CUSTOM_TOOLS.md) · [工作区文件与执行](docs/WORKSPACE_TOOLS.md) · [插件规范](docs/PLUGINS.md)
+- [自造工具与识别](docs/CUSTOM_TOOLS.md) · [工作区文件与执行](docs/WORKSPACE_TOOLS.md) · [插件规范](docs/PLUGINS.md) · [文件导入](docs/IMPORT.md)
 - [探针与更正](docs/SPIKE_REPORT.md) · [设备画像](DEVICE_PROFILE.md) · [探测记录](DEVICE_PROBING.md)
 - [核心 adapter 合同](app/src/core/README.md) · [最新验证](docs/VALIDATION.md) ·
   [native 构建说明](native/README.md)
 
-0.6.0 已真机验证：安装、工作区自检 9 步、开发模式 AI 文件工具闭环（写入/读取/执行/删除）、
+0.6.1 已真机验证：安装、工作区自检 9 步、开发模式 AI 文件工具闭环（写入/读取/执行/删除）、
 UI 高度 vh/vw 回归测试；native 插件已在 Actions 用 2018 工具链 + 真机 sysroot 构建、打进 AMR，
 真机通过原生 HTTPS POST 200、过期证书 `TLS_ERROR` 拒绝，并用 Anthropic Messages 真实 endpoint
 完成“调用 clock 工具 → 返回 UTC 时间”的完整模型+工具闭环。新增 key 自动保存、无限额循环、

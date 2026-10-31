@@ -107,6 +107,7 @@
 - 提示词：设置中的 `systemPrompt` 每轮作为 system 消息发送，不得写入显示历史；插件 prompt 追加到其后。提示词不得包含密钥；长度有界。
 - 显示：assistant 的 reasoning/thinking 只用于可折叠展示，不得回传 provider；工具调用/工具结果默认折叠；所有展示文本经轻量 Markdown→纯文本处理，不执行 HTML/Markdown。
 - 插件（0.6.0）：只接受 `penagent-plugin/1` 声明式 JSON（同 define_tool 的安全 recipe + prompt），放在应用私有工作区 `plugins/`；扫描/热加载不得执行插件内代码、动态 import、网络或文件路径；坏插件必须隔离并显示错误，不能拖垮应用。安装/卸载流程与规范见 `docs/PLUGINS.md`。
+- 文件导入（0.6.1）：只读固定候选路径（`/tmp/penagent-config.json|.txt`、工作区 `import/config.json`）且 ≤64 KiB；不得接受页面/模型提供的任意路径。导入 key 后必须按产品要求持久保存，导入文件不由应用自动删除，需提示用户清理；日志/截图/证据不得出现 key。
 
 ## 6. OpenAI 协议与有限工具循环
 
@@ -114,7 +115,7 @@
 
 首版非流式 `stream:false`；SSE 是否可用仍属待验证能力，不据旧通道推断永久不支持。校验响应 envelope、choices/message、content（允许 tool_calls 时为 null）、finish_reason、tool_calls 类型与数量；不支持的结构显式报错。
 
-每 run 默认至多 **6 次模型 POST**（含首问 / 最终回答）、每响应至多 8 个 tool_calls、每 run 至多 24 次工具执行、总耗时至多 120s。每工具参数 JSON 至多 8 KiB UTF-8、结果至多 4 KiB UTF-8（保留截断标记），另有工具自己的时间 / 输入限额。限额须集中定义、全路径执行；达到任一上限停止，不额外发「总结」突破预算，也不把被截断内容声称为完整结果。
+业务限额已按 0.6.0 要求取消：不设模型 POST 次数、每响应 tool_calls 数、每 run 工具次数或总时长阈值；服务商/DeepSeek Harness 是配额权威，应用只保留单次请求 60s、单工具 600s、请求/响应 2 MiB、参数 8 KiB、结果 4 KiB、上下文/存储字节上限等物理安全边界。达到安全边界时仍须明确停止，不伪造「总结」或把截断内容当完整结果。
 
 ### 6.2 参数、ID 与权限
 

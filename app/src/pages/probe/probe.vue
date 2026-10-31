@@ -11,6 +11,7 @@
       <div class="row"><div class="button" @click="runNative"><text class="label">原生 HTTPS</text></div><text class="result">{{ nativeResult }}</text></div>
       <div class="row"><div class="button" @click="runNativeTls"><text class="label">原生 TLS 拒绝</text></div><text class="result">{{ nativeTlsResult }}</text></div>
       <div class="row"><div class="button" @click="runReal"><text class="label">真实对话</text></div><text class="result">{{ realResult }}</text></div>
+      <div class="row"><div class="button" @click="importConfig"><text class="label">导入配置</text></div><text class="result">{{ importResult }}</text></div>
       <div class="units"><div class="u10"></div><div class="u20"></div><div class="u30"></div><text class="units-label">10 / 20 / 30vw，10 / 15 / 25vh</text></div>
     </scroller>
   </div>
@@ -21,6 +22,7 @@ import { getJson, setJson } from '../../services/storage/index.js';
 import * as input from '../../services/input/index.js';
 import { execPreset } from '../../services/device/index.js';
 import { nativeProbe } from '../../services/net/native.js';
+import { importConfigFromFile } from '../../services/device/import.js';
 import { navigate } from '../../services/navigation.js';
 import { errorLabel, getApplication } from '../../services/application.js';
 import { log } from '../../services/log/index.js';
@@ -28,7 +30,7 @@ import { MOCK_ORIGIN } from '../../services/device/development.js';
 const MOCK_BASE = MOCK_ORIGIN;
 export default {
   name: 'ProbePage',
-  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测', nativeResult: '待测', nativeTlsResult: '待测', realResult: '待测' }; },
+  data() { return { getResult: '待测', postResult: '待测', storageResult: '待测', inputResult: '待测', execResult: '待测', nativeResult: '待测', nativeTlsResult: '待测', realResult: '待测', importResult: '待测' }; },
   mounted() {
     this.active = true; this.generation = 0; this.destroyed = false;
     this.attachInput();
@@ -111,8 +113,23 @@ export default {
         log.warn('[pa:probe] native tls rejected', { code: code });
       }
     },
-    async runReal() {
-      const generation = this.generation;
+    async importConfig() {
+      this.importResult = '读取中…';
+      try {
+        const result = await importConfigFromFile();
+        if (!result.found) { this.importResult = '未找到：/tmp/penagent-config.json 或工作区 import/config.json'; return; }
+        const application = getApplication();
+        const current = await application.loadSettings();
+        const merged = Object.assign({}, current, result.settings, { persistApiKey: true });
+        await application.saveSettings(merged);
+        this.importResult = '已导入并保存 · ' + result.path + ' · ' + result.fields.join(', ');
+        log.warn('[pa:probe] config imported', { path: result.path, fields: result.fields });
+      } catch (error) {
+        this.importResult = '导入失败：' + ((error && error.code) || 'unknown');
+        log.warn('[pa:probe] config import failed', { code: error && error.code });
+      }
+    },
+    async runReal() {      const generation = this.generation;
       this.realResult = '请求中…';
       const started = Date.now();
       try {

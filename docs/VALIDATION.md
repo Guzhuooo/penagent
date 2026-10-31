@@ -1,42 +1,45 @@
-# 0.6.0 验证状态（可用预览）
+# 0.6.1 验证状态（可用预览）
 
-更新：2026-10-31。**0.6.0 增加 API key 自动持久化、业务限额取消、系统提示词注入、
-思考/工具折叠、轻量 Markdown 纯文本化、插件规范与热加载；真实 Anthropic endpoint 仍通过。**
+更新：2026-10-31。**0.6.1 增加配置文件导入，避免在笔上逐字输入 key；导入 Claude/DeepSeek
+harness 的 env JSON 后自动得到 Anthropic 地址/密钥/模型。业务限额按 DeepSeek Harness 方式
+放开（应用不设模型/工具/批量/总时长配额，服务端为配额权威），只保留设备物理安全边界。**
 
 ## 最终结果
 
 | 检查 | 结果 / 证据 |
 |---|---|
-| JS 全量 | legacy **5/5** + Node **141/141**，0 fail；`docs/evidence/js-tests-0.6.0.txt`；CI run [41187998797](https://github.com/Guzhuooo/penagent/actions/runs/41187998797) 绿 |
-| Python 策略 | **22/22**；`docs/evidence/ci-policy-tests-0.6.0.txt` |
-| 编译/AMR | 0.6.0 debug **646182 B / SHA `a9990ca0…eadfd`**；production **633053 B / SHA `817a4956…9f000`**；`verify-amr.py --native-sha256` 通过，含唯一 native `.so` SHA `970b6a33…` |
-| 真机安装 | 0.6.0 debug，uninstall/install/start ret:0 |
-| 真实 endpoint | probe 真实对话：`完成 · 工具 1 · 5598 ms`，时钟工具结果被正确用于回答；截图 `app/artifacts/0.6.0/probe-real-chat.png` |
-| 插件热加载 | 工作区 `plugins/weekday.json` 被工具页加载，出现 `weekday_cn`（origin plugin）；单元测试覆盖 reload/坏插件隔离；截图 `app/artifacts/0.6.0/tools-plugins.png` |
-| 设置/设备状态 | 测试后恢复空白生产设置，移除临时 key 与插件/工作区测试文件 |
+| JS 全量 | legacy **5/5** + Node **144/144**，0 fail；`docs/evidence/js-tests-0.6.1.txt` |
+| Python 策略 | **22/22** |
+| AMR | debug **650420 B / SHA `2b496550…d866a`**；production **636776 B / SHA `a021319e…392775`**；`verify-amr.py --native-sha256` 通过 |
+| 真机导入 | 把 harness env JSON 放到工作区 `import/config.json`，probe“导入配置”显示 `已导入并保存 · workspace/import/config.json · baseUrl, apiKey, model, apiFormat`；设置读回 baseUrl/model/apiFormat 正确，key 已保存 |
+| 真实 endpoint | 0.6.0 已验证 Anthropic 对话+clock 闭环；0.6.1 导入的是同一配置格式，导入后的设置读回已确认（本轮未重复完整对话） |
+| 设备状态 | 测试后恢复空白设置，删除导入文件/key |
 
-## 0.6.0 功能
+## 文件导入（0.6.1）
 
-- **API key 自动保存**：任何设置保存都会持久化当前 key；输入密钥后自动保存；只有“清除密钥”删除。`persistApiKey` 旧字段保留但不再能导致丢 key。
-- **取消业务限额**：旧 6 次模型 / 24 次工具 / 8 个批量 / 240s 停止阈值已移除；保留单次请求 60s、单次工具 600s、响应/请求/存储字节上限，用于防止设备挂死和存储爆掉。
-- **系统提示词注入**：设置页“系统提示词”，每轮作为 system 消息发送；插件 prompt 追加；不写入显示历史。
-- **折叠**：assistant 的 `reasoning`（Anthropic thinking / OpenAI reasoning_content）在消息卡显示为“思考过程”，工具调用显示为“工具调用 n 个”，默认折叠；工具卡片结果默认折叠，点击展开。reasoning 仅显示，不回传给模型。
-- **轻量 Markdown**：`utils/plain-text.js` 去除标题/粗体/代码围栏/链接语法（保留内容/URL），聊天与工具结果显示纯文本。
-- **插件规范**：`penagent-plugin/1`，声明式 recipe 工具 + 提示词；工作区 `plugins/*.json`，工具页重新加载即热载，不重装 AMR。见 [PLUGINS](PLUGINS.md)。
+- 路径：`/tmp/penagent-config.json`（或 `.txt`）或应用工作区 `import/config.json`；设置页顶部按钮、probe“导入配置”；地址和密钥都为空时设置页自动尝试一次。
+- 格式：Claude Code / DeepSeek Harness `{"env":{ANTHROPIC_BASE_URL,ANTHROPIC_AUTH_TOKEN,ANTHROPIC_MODEL}}`、penagent 设置 JSON、`{"pa.settings":...}` 包装、`key=value` 文本或裸 key。
+- 详见 [IMPORT](IMPORT.md)。导入文件 ≤64 KiB；固定候选路径；不使用模型/页面提供的任意路径。
+- key 导入后明文保存在本机（产品要求），导入文件需用户自行删除。
 
-## 验证边界
+## 限额
 
-- 折叠 UI 的**真机视觉**未完成：手工 seed 的聊天会话在设备 UI 未加载（文本/单元测试覆盖 reasoning 保留与折叠标记；实际聊天滚动测试仍待做）。
-- 插件热重载的真机按钮点击未截图；工具页已展示插件工具，reload/错误隔离由单元测试覆盖。
-- 真实 endpoint 只验证一个账户/模型；流式、长对话限流、Falcon 线程/取消、IME/内存/多分辨率仍未验证。
-- 插件不能执行代码；任意 JS/native 插件仍需走单独的安全与 CI 审计。
-- `native-manual.yml` + `ci-policy.json` 仍 disabled；正式发布链路仍需获批 vendor bundle。
+- 不再有 6 次模型 / 24 次工具 / 8 个批量 / 240s 业务阈值；1e6 等值只是防爆护栏，不是用户配额。
+- 保留单次请求 60s、单工具 600s、请求/响应 2 MiB、上下文/结果/存储字节上限；这些是设备稳定性边界，不是 API 配额。
+- DeepSeek Harness/服务端仍可自行限流（429）；应用把非 2xx 报为 HTTP_ERROR。
+
+## 未完成 / 边界
+
+- 设置页顶部导入按钮在真机触控测试中未命中（probe 导入路径已验证；按钮存在但需修正触控/滚动命中）；自动导入在“地址+密钥为空”时执行。
+- 真实 endpoint 本轮未重复完整对话；0.5/0.6 的 Anthropic clock 闭环仍是最近一次真实网络证据。
+- 折叠 UI 真机视觉、插件 reload 点击、Falcon 线程/取消、IME/内存/多分辨率仍未验证。
+- `native-manual.yml` + `ci-policy.json` 仍 disabled；正式发布仍需获批 vendor bundle。
 
 ## 证据
 
-- `docs/evidence/js-tests-0.6.0.txt` / `ci-policy-tests-0.6.0.txt`
-- `docs/evidence/build-debug-0.6.0.txt` / `build-production-0.6.0.txt`
-- `docs/evidence/amr-debug-0.6.0.json` / `amr-production-0.6.0.json`
-- `docs/evidence/native-device-0.6.0.txt`
-- `app/artifacts/0.6.0/`（AMR、真实对话、工具/插件截图）
-- `docs/evidence/source-sha256-0.6.0.json`
+- `docs/evidence/js-tests-0.6.1.txt` / `ci-policy-tests-0.6.1.txt`
+- `docs/evidence/build-debug-0.6.1.txt` / `build-production-0.6.1.txt`
+- `docs/evidence/amr-debug-0.6.1.json` / `amr-production-0.6.1.json`
+- `docs/evidence/native-device-0.6.1.txt`
+- `app/artifacts/0.6.1/`（AMR、导入结果截图）
+- `docs/evidence/source-sha256-0.6.1.json`

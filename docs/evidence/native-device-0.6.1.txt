@@ -1,0 +1,32 @@
+0.6.1 文件导入验证 — 2026-10-31
+Profile: Y02-3562 / 4.9.7 / appid 8002026100700001 / ADB <device-serial>
+
+PACKAGE
+- debug 650420 B sha256 2b496550a28ccad7187725bcb865d77ecccbbb8c00dfa78ac3038cb3cbc4d866a
+- production 636776 B sha256 a021319e9b0ed5c74152d2f81993274771896757cf869d2e26e1ad40cd392775
+- native .so SHA 970b6a33… unchanged; verify-amr.py --native-sha256 passed.
+- host tests: 144/144 + legacy 5/5, Python 22/22.
+
+IMPORT FLOW TESTED ON DEVICE
+- Pushed a Claude/DeepSeek harness style JSON (env.ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN /
+  ANTHROPIC_MODEL) to /tmp/penagent-config.json and workspace import/config.json.
+- Probe page -> 导入配置; screen showed:
+  "已导入并保存 · workspace/import/config.json · baseUrl, apiKey, model, apiFormat"
+- Saved settings readback (key masked here):
+  baseUrl=https://api.yunqing.asia, apiKey=***, model=deepseek-v4.1-flash,
+  apiFormat=anthropic, persistApiKey=true.
+- The same parser unit tests cover env JSON, direct settings, pa.settings envelope, key=value and
+  bare-key text, malformed/oversized files (docs/evidence/js-tests-0.6.1.txt).
+- The file was imported into app settings; no key appeared in docs/logs/screenshots. Test files and
+  key were removed afterwards; device settings are blank.
+
+LIMITS
+- Removed business quotas (model requests/tools/batch/total run time) to align with DeepSeek
+  Harness; the provider remains the quota authority. Physical guardrails remain: 60s per request,
+  600s per tool, 2 MiB request/response, bounded storage/context/tool result.
+
+BOUNDARY
+- Import UI has two paths (settings top button and probe button). Settings page auto-import runs
+  when both address and key are empty. The fixed top button did not respond in this build's
+  device tap test (likely missed touch target after scroll state); the probe import path and the
+  adapter/parser are verified. A follow-up should confirm the settings-page button tap target.

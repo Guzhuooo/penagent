@@ -7,12 +7,14 @@
       <div class="action" @click="save"><text class="action-label">{{ saving ? '保存中…' : '保存设置' }}</text></div>
     </div>
     <scroller class="settings" scroll-direction="vertical">
+      <div class="choice import-choice" @click="importFromFile"><text class="choice-label">从文件导入配置/密钥</text></div>
       <text class="heading">模型连接</text>
       <text class="warning">生产请求经 native httpx：TLS peer/hostname 校验、禁止重定向、真实状态码；密钥只发送到所填服务。</text>
       <div v-if="!loaded" class="choice" @click="load"><text class="choice-label">{{ loading ? '正在读取配置…' : '重新读取配置（读取成功前不能修改）' }}</text></div>
       <setting-field label="服务地址" :value="form.baseUrl" placeholder="填写 HTTPS API 地址" @edit="edit('baseUrl')" />
       <setting-field label="密钥" :value="form.apiKey ? '••••••••（已设置）' : ''" placeholder="未设置" @edit="edit('apiKey')" />
       <text class="warning">密钥在此页遮罩；系统输入界面可能显示明文，请留意周围环境。</text>
+      <text class="warning">也可用 adb push 到 /tmp/penagent-config.json 或工作区 import/config.json 后点顶部“从文件导入配置/密钥”。</text>
       <setting-field label="模型" :value="form.model" placeholder="填写模型名称" @edit="edit('model')" />
       <div class="choice" @click="toggleFormat"><text class="choice-label">接口格式</text><text class="toggle-state">{{ formatLabel }}</text></div>
       <text v-if="form.apiFormat === 'anthropic'" class="warning">Anthropic Messages：地址填根地址或 /v1，请求发往 /v1/messages；密钥以 x-api-key 发送。</text>
@@ -38,6 +40,7 @@ import SettingField from '../../components/setting-field.vue';
 import { icon } from '../../assets/icons.js';
 import { getApplication, developerMockSettings, errorLabel } from '../../services/application.js';
 import * as input from '../../services/input/index.js';
+import { importConfigFromFile } from '../../services/device/import.js';
 import { leaveSettings } from '../../services/navigation.js';
 const TOOL_OPTIONS = [
   { id: 'clock', label: '时间' }, { id: 'calculator', label: '计算器' },
@@ -109,6 +112,7 @@ export default {
         this.loaded = true; this.notice = '';
       } catch (error) { if (this.valid(generation)) this.notice = errorLabel(error); }
       finally { if (this.valid(generation)) this.loading = false; }
+      if (this.valid(generation)) Promise.resolve().then(() => this.autoImportIfEmpty());
     },
     canEdit() { return this.loaded && !this.loading && !this.saving && this.ownerActive && !this.destroyed; },
     async edit(field) {
@@ -121,6 +125,39 @@ export default {
       catch (error) { if (this.valid(generation)) { this.editing = null; this.notice = errorLabel(error); } }
     },
     toggleFormat() { if (!this.canEdit()) return; this.form.apiFormat = this.form.apiFormat === 'anthropic' ? 'openai' : 'anthropic'; this.notice = '修改尚未保存'; },
+    async importFromFile() {
+      if (!this.canEdit()) return;
+      const generation = this.generation;
+      this.notice = '正在读取导入文件…';
+      try {
+        const result = await importConfigFromFile();
+        if (!this.valid(generation)) return;
+        if (!result.found) { this.notice = '未找到 /tmp/penagent-config.json（或 .txt）；请用 adb push 后再试'; return; }
+        await this.applyImported(result, generation);
+      } catch (error) {
+        if (this.valid(generation)) this.notice = errorLabel(error) + '（请检查文件格式）';
+      }
+    },
+    async applyImported(result, generation) {
+      const settings = result.settings || {};
+      ['baseUrl', 'apiKey', 'model', 'temperature', 'maxTokens', 'apiFormat', 'systemPrompt',
+        'persistApiKey', 'execShellEnabled', 'developmentMode', 'allowedProbeHosts'].forEach((key) => {
+        if (Object.prototype.hasOwnProperty.call(settings, key)) this.form[key] = settings[key];
+      });
+      if (settings.tools && typeof settings.tools === 'object') this.form.tools = Object.assign({}, this.form.tools, settings.tools);
+      this.notice = '已从 ' + result.path + ' 导入（' + result.fields.join(', ') + '），正在保存';
+      await this.save();
+      if (this.valid(generation)) this.notice = '已导入并保存：' + result.fields.join(', ');
+    },
+    async autoImportIfEmpty() {
+      if (!this.canEdit() || this.form.baseUrl || this.form.apiKey) return;
+      const generation = this.generation;
+      try {
+        const result = await importConfigFromFile();
+        if (!this.valid(generation) || !result.found) return;
+        await this.applyImported(result, generation);
+      } catch (error) { /* missing/broken import file must not disturb normal settings */ }
+    },
     toggleTool(id) { if (!this.canEdit()) return; this.form.tools[id] = !this.form.tools[id]; this.notice = '修改尚未保存'; },
     toggleExec() { if (!this.canEdit()) return; this.form.execShellEnabled = !this.form.execShellEnabled; this.form.tools.execShell = this.form.execShellEnabled; this.notice = '修改尚未保存；设备执行能力仍不可用'; },
     useMock() { if (!this.canEdit()) return; this.form = developerMockSettings(this.form); this.notice = '已选择开发 mock，请保存；原密钥已替换为测试密钥'; },
@@ -142,6 +179,7 @@ export default {
 <style lang="less" scoped>
 @import "base.less";
 .page { width: 100vw; height: 100vh; flex-direction: row; background-color: @bg-base; }
+.import-choice { width: 70vw; min-height: 10vh; margin-left: 3vw; margin-top: 2vh; flex-direction: row; align-items: center; justify-content: center; background-color: @brand; border-radius: @radius-sm; }
 .rail { width: @sidebar-w; height: 100vh; flex-direction: column; background-color: @bg-elevated; }
 .brand { width: @rail-inner; height: 18vh; margin-left: @rail-inset; font-size: @font-md; color: @accent; }
 .action { width: @rail-inner; height: @touch-min; margin-left: @rail-inset; flex-direction: row; align-items: center; justify-content: center; background-color: @bg-muted; border-radius: @radius-sm; }

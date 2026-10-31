@@ -5,6 +5,19 @@
 
 ---
 
+## 2026-10-31 · 0.6.1：文件导入配置/key，限额对齐 DeepSeek Harness
+
+### R14 · 文件导入
+- **要求**：在笔上逐字输入 key 太麻烦；做文件导入；业务限额对齐 DeepSeek Harness。
+- **实现**：新增 `core/import-config.js`（纯解析：Claude/DeepSeek harness `env` JSON、penagent 设置 JSON、`pa.settings` 包装、`key=value`/裸 key 文本；≤64 KiB）与 `services/device/import.js`（固定候选 `/tmp/penagent-config.json|.txt` + 工作区 `import/config.json`，工作区优先；不接收页面/模型任意路径）。设置页顶部/中部导入按钮、probe“导入配置”，地址+密钥都为空时设置页自动尝试导入；导入后自动保存，key 按产品要求明文持久化。
+- **限额**：应用不设模型/工具/批量/总时长业务配额（与 DeepSeek Harness 对齐，服务端为配额权威）；仅单请求 60s、单工具 600s、请求/响应 2 MiB、上下文/结果/存储字节上限。
+- **测试**：新增 `import-config.test.mjs`（env/direct/envelope/text/bare key/畸形/超限）；全套 **144/144 + legacy 5/5**，Python 22/22。
+- **真机**：0.6.1 debug 安装 ret:0；把 harness env JSON 放工作区 `import/config.json`，probe 导入显示 `已导入并保存 · workspace/import/config.json · baseUrl, apiKey, model, apiFormat`；设置读回 baseUrl=`https://api.yunqing.asia`、model=`deepseek-v4.1-flash`、apiFormat=`anthropic`、key 已保存。测试后清空设置/删除文件/key。
+- **问题**：设置页顶部导入按钮在真机触控测试中未命中（probe 导入路径验证通过；按钮存在，疑似滚动/触控目标问题）；后续修。`/tmp` fs 读取返回 CAPABILITY，已改为工作区优先。
+- **产物**：debug **650420 B / SHA 2b496550…d866a**，production **636776 B / SHA a021319e…392775**；native `.so` 仍 `970b6a33…`。证据 `docs/evidence/native-device-0.6.1.txt`、`app/artifacts/0.6.1/`。
+
+---
+
 ## 2026-10-31 · 0.6.0：key 自动保存、无限额、折叠、提示词、纯文本渲染与插件热载
 
 ### R13 · 交互与扩展性升级
