@@ -342,8 +342,8 @@ def collect(serial, staging, plan):
                 raise SystemExit("device sha256sum missing for " + entry["device_path"])
             if device_hashes[entry["device_path"]] != entry["sha256"]:
                 raise SystemExit("device pull does not match device sha256sum: " + entry["device_path"])
-        (staging / "provenance" / "device-sha256sum.txt").write_text(
-            listing.stdout.replace("\r\n", "\n"), encoding="utf-8")
+        (staging / "provenance" / "device-sha256sum.txt").write_bytes(
+            listing.stdout.replace("\r\n", "\n").encode("utf-8"))
         print("device sha256sum cross-check: OK for", len(plan), "files")
     else:
         print("device sha256sum unavailable; relying on post-pull hashes")
@@ -351,10 +351,10 @@ def collect(serial, staging, plan):
     identity = adb(serial, "shell", "uname -a; cat /proc/version 2>/dev/null; "
                                     "cat /etc/os-release 2>/dev/null; ls -l " +
                    " ".join(e["device_path"] for e in plan), expect=False)
-    (staging / "provenance" / "device-identity.txt").write_text(
-        identity.stdout.replace("\r\n", "\n"), encoding="utf-8")
-    (staging / "provenance" / "adb-commands.txt").write_text(
-        "\n".join(commands) + "\n", encoding="utf-8")
+    (staging / "provenance" / "device-identity.txt").write_bytes(
+        identity.stdout.replace("\r\n", "\n").encode("utf-8"))
+    (staging / "provenance" / "adb-commands.txt").write_bytes(
+        ("\n".join(commands) + "\n").encode("utf-8"))
     return device_hashes
 
 
@@ -379,8 +379,8 @@ def build_manifest(staging, plan, serial):
             if alias != real:
                 aliases.append({"name": alias, "target": real})
     aliases.sort(key=lambda item: item["name"])
-    (staging / "sysroot" / "aliases.tsv").write_text(
-        "".join(item["name"] + "\t" + item["target"] + "\n" for item in aliases), encoding="utf-8")
+    (staging / "sysroot" / "aliases.tsv").write_bytes(
+        "".join(item["name"] + "\t" + item["target"] + "\n" for item in aliases).encode("utf-8"))
 
     # Every staged file except the manifest itself is covered by the file table.
     files = {}
@@ -460,7 +460,7 @@ def build_manifest(staging, plan, serial):
         },
     }
     text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
-    (staging / "manifest.json").write_text(text, encoding="utf-8")
+    (staging / "manifest.json").write_bytes(text.encode("utf-8"))
     return manifest, text
 
 
@@ -513,7 +513,7 @@ def main():
         manifest, text = build_manifest(staging, plan, arguments.adb_serial)
         archive_path = out_dir / ARCHIVE_NAME
         make_archive(staging, archive_path)
-        (out_dir / "manifest.json").write_text(text, encoding="utf-8")
+        (out_dir / "manifest.json").write_bytes(text.encode("utf-8"))
 
     digest = sha256_file(archive_path)
     print()

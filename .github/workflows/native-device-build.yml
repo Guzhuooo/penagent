@@ -32,7 +32,7 @@ concurrency:
 
 env:
   BUNDLE_ARCHIVE: native/device-bundle/device-bundle.tar.xz
-  BUNDLE_ARCHIVE_SHA256: "2348651ea6a21e0a323b5cc974c03212f09ae0050a8b968750a9c90c4bd0063c"
+  BUNDLE_ARCHIVE_SHA256: "001ec916cd6810e79752c08f72620efecab396a961fa17dcfae798805acf4f81"
   BUNDLE_MANIFEST: native/device-bundle/manifest.json
   # 2018-era toolchain: Ubuntu 18.04 g++-aarch64-linux-gnu (GCC 7.5.0, glibc 2.27
   # dev headers) plus cmake==3.18.4.post1 from PyPI (bionic ships cmake 3.10).
